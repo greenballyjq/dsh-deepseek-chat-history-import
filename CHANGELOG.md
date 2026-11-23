@@ -1,5 +1,12 @@
 # 变更日志
 
+## 2.13.2
+
+- 项目更名为 **dsh-deepseek-chat-history-import**，明确用于导入 DeepSeek 聊天历史
+- 包名、仓库名、客户端 ID、HTTP 路由一起改名，避免和已有的 `dsh-deepseek-import` 冲突
+- 插件数据目录沿用旧名 `dsh-deepseek-import`，升级不会丢失已有上传、设置和校准
+- 旧安装需要卸载后按新包名重新安装
+
 ## 2.13.1
 
 - 支持把当前提示词保存为「我的预设」，可在预设列表中直接选择

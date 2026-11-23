@@ -23,7 +23,7 @@ import { resolveDshHome, resolveImportRoot } from './lib/profile.js'
 import { handleRoute, lazyServices } from './lib/routes.js'
 import { pruneUploads } from './lib/store.js'
 
-export const name = 'deepseek-import'
+export const name = 'deepseek-chat-history-import'
 
 
 export function apply(ctx) {
@@ -76,12 +76,12 @@ export function apply(ctx) {
         })
       } catch (error) {
         // Never fail the web boot: the entry stays active with no route.
-        console.error('dsh-deepseek-import: route registration failed:', error)
+        console.error('dsh-deepseek-chat-history-import: route registration failed:', error)
       }
     })
   } catch (error) {
     // Never fail the web boot: an activation error must not block the app.
-    console.error('dsh-deepseek-import: activation failed:', error)
+    console.error('dsh-deepseek-chat-history-import: activation failed:', error)
   }
 }
 

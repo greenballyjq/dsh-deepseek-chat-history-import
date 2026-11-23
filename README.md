@@ -1,6 +1,6 @@
-# DeepSeek 对话导入（DSH 插件）
+# DeepSeek 聊天历史导入（DSH 插件）
 
-把 DeepSeek 网页端导出的对话历史导入 **DeepSeek Harness（DSH）**：在侧栏「导入」里选择文件，挑选对话，设置保留轮数与压缩方式，导入成可阅读、可继续聊的 DSH 会话。
+把 DeepSeek 网页端导出的聊天历史导入 **DeepSeek Harness（DSH）**：在侧栏「导入」里选择文件，挑选对话，设置保留轮数与压缩方式，导入成可阅读、可继续聊的 DSH 会话。
 
 支持官方 ZIP / 拆分出来的单个对话 / 浏览器 IndexedDB 导出 / JSONL，也可以一次选择多个文件混合导入。所有处理都在本机完成。
 
@@ -106,7 +106,7 @@
 ### WebUI（`dsh web`）
 
 ```bash
-dsh plugin --profile web add github:greenballyjq/dsh-deepseek-import
+dsh plugin --profile web add github:greenballyjq/dsh-deepseek-chat-history-import
 ```
 
 安装后重启 `dsh web`，刷新页面，侧栏出现「导入」。
@@ -116,7 +116,7 @@ dsh plugin --profile web add github:greenballyjq/dsh-deepseek-import
 在桌面应用的「插件」页添加：
 
 ```text
-github:greenballyjq/dsh-deepseek-import
+github:greenballyjq/dsh-deepseek-chat-history-import
 ```
 
 按提示重启。桌面端使用自己的 `desktop` profile，不要用 `--profile web` 安装到错误位置。
@@ -124,8 +124,8 @@ github:greenballyjq/dsh-deepseek-import
 ### 本地开发安装
 
 ```bash
-git clone https://github.com/greenballyjq/dsh-deepseek-import.git
-cd dsh-deepseek-import
+git clone https://github.com/greenballyjq/dsh-deepseek-chat-history-import.git
+cd dsh-deepseek-chat-history-import
 dsh plugin --profile web add link:.
 ```
 

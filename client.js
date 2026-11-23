@@ -1,10 +1,10 @@
 window.__ModuleLoader__.load({
-  id: 'dsh-deepseek-import',
+  id: 'dsh-deepseek-chat-history-import',
   factory(require) {
     const React = require('react')
     const h = React.createElement
 
-    const API = '/deepseek-import/api'
+    const API = '/deepseek-chat-history-import/api'
     const ROW_HEIGHT = 46
     const RECENT_CHIPS = 4
     const DEFAULT_LEVELS = { brief: 800, standard: 1500, detailed: 2500 }
@@ -956,7 +956,7 @@ window.__ModuleLoader__.load({
       }
 
       const uploadFile = async (file) => {
-        const response = await fetch('/deepseek-import/upload', {
+        const response = await fetch('/deepseek-chat-history-import/upload', {
           method: 'POST',
           headers: { 'x-file-name': encodeURIComponent(file.name) },
           body: file,
@@ -1792,13 +1792,13 @@ window.__ModuleLoader__.load({
         clientSessions = ctx.sessions
         ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
           name: 'sidebar.panellist',
-          id: 'deepseek-import',
+          id: 'deepseek-chat-history-import',
           order: 2,
           label: () => '导入',
         }, ImportIcon))
         ctx.slots.inject('main', () => ctx.slots.register({
           name: 'main',
-          key: 'deepseek-import',
+          key: 'deepseek-chat-history-import',
         }, ImportPanel))
       },
     }

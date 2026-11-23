@@ -129,6 +129,6 @@
 
 ## 数据位置
 
-- 上传副本/配置/校准：插件数据目录（Windows `%LOCALAPPDATA%\dsh-deepseek-import`）
+- 上传副本/配置/校准：插件数据目录（Windows `%LOCALAPPDATA%\dsh-deepseek-import`，沿用旧目录名）
 - 导入的会话：DSH 会话目录/工作区
 - 导入位置：插件配置里可改

@@ -74,7 +74,7 @@ const hostSource = ['index.js', ...fs.readdirSync(path.join(root, 'lib')).map((n
   .map((file) => read(file))
   .join('\n')
 const clientSource = read('client.js')
-for (const route of ['/deepseek-import/api', '/deepseek-import/upload']) {
+for (const route of ['/deepseek-chat-history-import/api', '/deepseek-chat-history-import/upload']) {
   if (!hostSource.includes(route)) fail('index.js', 0, 'missing route ' + route)
   if (!clientSource.includes(route)) fail('client.js', 0, 'missing route ' + route)
 }

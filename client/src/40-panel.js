@@ -310,7 +310,7 @@
       }
 
       const uploadFile = async (file) => {
-        const response = await fetch('/deepseek-import/upload', {
+        const response = await fetch('/deepseek-chat-history-import/upload', {
           method: 'POST',
           headers: { 'x-file-name': encodeURIComponent(file.name) },
           body: file,

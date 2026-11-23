@@ -1,4 +1,4 @@
-    const API = '/deepseek-import/api'
+    const API = '/deepseek-chat-history-import/api'
     const ROW_HEIGHT = 46
     const RECENT_CHIPS = 4
     const DEFAULT_LEVELS = { brief: 800, standard: 1500, detailed: 2500 }

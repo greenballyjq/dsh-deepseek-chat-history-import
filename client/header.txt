@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: 'dsh-deepseek-import',
+  id: 'dsh-deepseek-chat-history-import',
   factory(require) {
     const React = require('react')
     const h = React.createElement

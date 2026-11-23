@@ -19,7 +19,7 @@
 
 - DSH 会话日志（导入结果）
 - DSH 工作区目录（按对话标题创建，重复时编号）
-- 插件数据目录：
+- 插件数据目录（目录名沿用旧项目名 `dsh-deepseek-import`，避免升级丢失已有上传/设置/校准）：
   - Windows：`%LOCALAPPDATA%\dsh-deepseek-import`
   - Linux：`$XDG_DATA_HOME/dsh-deepseek-import` 或 `~/.local/share/dsh-deepseek-import`
   - macOS：`~/Library/Application Support/dsh-deepseek-import`

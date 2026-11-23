@@ -1,6 +1,6 @@
-# DeepSeek Conversation Import for DeepSeek Harness
+# DeepSeek Chat History Import for DeepSeek Harness
 
-Import DeepSeek web chat exports into **DeepSeek Harness (DSH)** as readable, resumable sessions. Select one or many local files, pick a conversation, choose how much history to keep, and import it into a workspace.
+Import DeepSeek web chat history into **DeepSeek Harness (DSH)** as readable, resumable sessions. Select one or many local files, pick a conversation, choose how much history to keep, and import it into a workspace.
 
 All processing is local. The plugin does not request an account password, cookie, or API key.
 
@@ -25,18 +25,18 @@ Requirements: DSH 0.2.x (tested on 0.2.2-rc.1), Node.js >= 22.19.
 WebUI:
 
 ```bash
-dsh plugin --profile web add github:greenballyjq/dsh-deepseek-import
+dsh plugin --profile web add github:greenballyjq/dsh-deepseek-chat-history-import
 ```
 
 Restart `dsh web` and refresh the page. The **Import** tab appears in the sidebar.
 
-Official desktop app: add `github:greenballyjq/dsh-deepseek-import` from the in-app Plugins page and restart.
+Official desktop app: add `github:greenballyjq/dsh-deepseek-chat-history-import` from the in-app Plugins page and restart.
 
 Local development:
 
 ```bash
-git clone https://github.com/greenballyjq/dsh-deepseek-import.git
-cd dsh-deepseek-import
+git clone https://github.com/greenballyjq/dsh-deepseek-chat-history-import.git
+cd dsh-deepseek-chat-history-import
 dsh plugin --profile web add link:.
 npm run build:client
 ```

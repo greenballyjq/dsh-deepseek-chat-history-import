@@ -1,5 +1,5 @@
     const CSS = `
-.dsdi-root{display:flex;flex-direction:column;height:100%;min-height:0;gap:10px;padding:16px 18px;box-sizing:border-box;color:var(--dsw-alias-label-primary,#1f2329);font-size:13px}
+.dsdi-root{display:flex;flex-direction:column;height:100%;min-height:0;gap:10px;padding:16px 18px;box-sizing:border-box;color:var(--dsw-alias-label-primary,#1f2329);font-size:13px;overflow:hidden}
 .dsdi-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .dsdi-title h1{font-size:16px;font-weight:600;margin:0}
 .dsdi-hint{color:var(--dsw-alias-label-secondary,#8a8f99);font-size:12px}
@@ -28,7 +28,7 @@
 .dsdi-jobsegment.pending{color:#8a8f99}
 .dsdi-badge{padding:1px 8px;border-radius:999px;background:var(--dsw-alias-bg-layer-2,#f2f4f7);border:1px solid var(--dsw-alias-border-l1,#d9dce1);font-size:11px}
 .dsdi-badge.ok{color:var(--dsw-alias-state-success-primary,#1a7f37);border-color:var(--dsw-alias-state-success-primary,#1a7f37)}
-.dsdi-list{flex:1 1 auto;min-height:220px;overflow:auto;border:1px solid var(--dsw-alias-border-l1,#d9dce1);border-radius:10px;background:var(--dsw-alias-bg-layer-1,#fff);position:relative}
+.dsdi-list{flex:1 1 auto;min-height:0;overflow:auto;border:1px solid var(--dsw-alias-border-l1,#d9dce1);border-radius:10px;background:var(--dsw-alias-bg-layer-1,#fff);position:relative}
 .dsdi-rowitem{display:flex;align-items:center;gap:10px;height:${ROW_HEIGHT}px;padding:0 12px;box-sizing:border-box;border-bottom:1px solid var(--dsw-alias-border-l1,#eef0f3);cursor:pointer}
 .dsdi-rowitem:hover{background:var(--dsw-alias-bg-layer-2,#f7f8fa)}
 .dsdi-rowitem.selected{background:var(--dsw-alias-bg-selected,#eaf0ff)}

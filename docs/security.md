@@ -25,6 +25,7 @@
   - macOS：`~/Library/Application Support/dsh-deepseek-import`
 - 导入位置由「插件配置 → 导入位置」决定，默认在用户目录下的 `DeepSeek-Imports`
 - 摘要旁的记录只写提示词标签与短指纹，不写自定义提示词全文
+- 自定义摘要预设保存在插件数据目录（`summary-presets.json`），不上传
 
 ## 上传副本
 

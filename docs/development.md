@@ -19,6 +19,7 @@ lib/
   routes.js           HTTP 路由
   profile.js          模型/价格/设置
   summary-prompt.js   摘要预设、固定约束、拼装与截断
+  summary-presets.js  自定义预设的本机存储
   calibrate.js        费用校准
   tokens.js           官方比例 token 估算
   store.js            最近文件、lastSet、上传清理

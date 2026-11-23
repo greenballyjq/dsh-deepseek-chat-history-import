@@ -16,7 +16,7 @@ window.__ModuleLoader__.load({
     let clientSessions = null
 
     const CSS = `
-.dsdi-root{display:flex;flex-direction:column;height:100%;min-height:0;gap:10px;padding:16px 18px;box-sizing:border-box;color:var(--dsw-alias-label-primary,#1f2329);font-size:13px}
+.dsdi-root{display:flex;flex-direction:column;height:100%;min-height:0;gap:10px;padding:16px 18px;box-sizing:border-box;color:var(--dsw-alias-label-primary,#1f2329);font-size:13px;overflow:hidden}
 .dsdi-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .dsdi-title h1{font-size:16px;font-weight:600;margin:0}
 .dsdi-hint{color:var(--dsw-alias-label-secondary,#8a8f99);font-size:12px}
@@ -45,7 +45,7 @@ window.__ModuleLoader__.load({
 .dsdi-jobsegment.pending{color:#8a8f99}
 .dsdi-badge{padding:1px 8px;border-radius:999px;background:var(--dsw-alias-bg-layer-2,#f2f4f7);border:1px solid var(--dsw-alias-border-l1,#d9dce1);font-size:11px}
 .dsdi-badge.ok{color:var(--dsw-alias-state-success-primary,#1a7f37);border-color:var(--dsw-alias-state-success-primary,#1a7f37)}
-.dsdi-list{flex:1 1 auto;min-height:220px;overflow:auto;border:1px solid var(--dsw-alias-border-l1,#d9dce1);border-radius:10px;background:var(--dsw-alias-bg-layer-1,#fff);position:relative}
+.dsdi-list{flex:1 1 auto;min-height:0;overflow:auto;border:1px solid var(--dsw-alias-border-l1,#d9dce1);border-radius:10px;background:var(--dsw-alias-bg-layer-1,#fff);position:relative}
 .dsdi-rowitem{display:flex;align-items:center;gap:10px;height:${ROW_HEIGHT}px;padding:0 12px;box-sizing:border-box;border-bottom:1px solid var(--dsw-alias-border-l1,#eef0f3);cursor:pointer}
 .dsdi-rowitem:hover{background:var(--dsw-alias-bg-layer-2,#f7f8fa)}
 .dsdi-rowitem.selected{background:var(--dsw-alias-bg-selected,#eaf0ff)}
@@ -681,6 +681,7 @@ window.__ModuleLoader__.load({
       const [summaryPromptText, setSummaryPromptText] = React.useState('')
       const [summaryPromptBase, setSummaryPromptBase] = React.useState('neutral')
       const [customPromptDraft, setCustomPromptDraft] = React.useState('')
+      const [presetDialog, setPresetDialog] = React.useState(null)
       const [maxCost, setMaxCost] = React.useState(1)
       const [estimate, setEstimate] = React.useState(null)
       const [estimating, setEstimating] = React.useState(false)
@@ -774,6 +775,9 @@ window.__ModuleLoader__.load({
       const summaryChars = levels[summaryLevel] || levels.standard || 1500
       const summaryPresets = (profileInfo && Array.isArray(profileInfo.summaryPresets)) ? profileInfo.summaryPresets : []
       const summaryPromptLimit = Number(profileInfo && profileInfo.maxSummaryPromptChars) > 0 ? Number(profileInfo.maxSummaryPromptChars) : 4000
+      const activeSummaryPreset = summaryPresets.find((preset) => preset && preset.id === summaryPromptPreset) || null
+      const builtinSummaryPresets = summaryPresets.filter((preset) => preset && preset.builtin)
+      const customSummaryPresets = summaryPresets.filter((preset) => preset && !preset.builtin)
       const promptError = mode === 'summary' && summaryPromptPreset === 'custom' && !summaryPromptText.trim()
         ? '摘要提示词不能为空'
         : (mode === 'summary' && summaryPromptText.length > summaryPromptLimit ? '摘要提示词不能超过 ' + summaryPromptLimit + ' 字' : '')
@@ -812,6 +816,64 @@ window.__ModuleLoader__.load({
         if (!preset) return
         setSummaryPromptPreset(preset.id)
         setSummaryPromptText(preset.text || '')
+      }
+      const closePresetDialog = () => setPresetDialog(null)
+      const openSavePreset = () => {
+        const base = activeSummaryPreset && !activeSummaryPreset.builtin
+          ? activeSummaryPreset.name + ' 副本'
+          : '我的预设'
+        setPresetDialog({ mode: 'save', name: base.slice(0, 40), error: '', busy: false })
+      }
+      const openDeletePreset = () => {
+        if (!activeSummaryPreset || activeSummaryPreset.builtin) return
+        setPresetDialog({ mode: 'delete', preset: activeSummaryPreset, error: '', busy: false })
+      }
+      const submitSavePreset = async () => {
+        if (!presetDialog || presetDialog.busy) return
+        const name = String(presetDialog.name || '').trim()
+        if (!name) {
+          setPresetDialog({ ...presetDialog, error: '预设名称不能为空' })
+          return
+        }
+        setPresetDialog({ ...presetDialog, busy: true, error: '' })
+        try {
+          const payload = await call('summaryPresetSave', { name, text: summaryPromptText })
+          const saved = payload && payload.preset
+          if (!saved) throw new Error('保存失败')
+          setProfileInfo((current) => current
+            ? { ...current, summaryPresets: [...(Array.isArray(current.summaryPresets) ? current.summaryPresets : []), saved] }
+            : current)
+          setSummaryPromptPreset(saved.id)
+          setSummaryPromptBase(saved.id)
+          setSummaryPromptText(saved.text || '')
+          setPresetDialog(null)
+          setEstimateError('')
+        } catch (cause) {
+          setPresetDialog({ ...presetDialog, busy: false, error: cause instanceof Error ? cause.message : String(cause) })
+        }
+      }
+      const submitDeletePreset = async () => {
+        if (!presetDialog || !presetDialog.preset || presetDialog.busy) return
+        const target = presetDialog.preset
+        setPresetDialog({ ...presetDialog, busy: true, error: '' })
+        try {
+          await call('summaryPresetDelete', { id: target.id })
+          setProfileInfo((current) => current
+            ? { ...current, summaryPresets: (Array.isArray(current.summaryPresets) ? current.summaryPresets : []).filter((preset) => preset.id !== target.id) }
+            : current)
+          if (summaryPromptPreset === target.id) {
+            const fallback = summaryPresets.find((preset) => preset && preset.builtin && preset.id === 'neutral')
+              || summaryPresets.find((preset) => preset && preset.builtin)
+              || summaryPresets[0]
+            setSummaryPromptPreset(fallback ? fallback.id : 'neutral')
+            setSummaryPromptBase(fallback ? fallback.id : 'neutral')
+            setSummaryPromptText(fallback ? (fallback.text || '') : '')
+          }
+          setPresetDialog(null)
+          setEstimateError('')
+        } catch (cause) {
+          setPresetDialog({ ...presetDialog, busy: false, error: cause instanceof Error ? cause.message : String(cause) })
+        }
       }
 
       const filtered = React.useMemo(() => {
@@ -1504,14 +1566,27 @@ window.__ModuleLoader__.load({
                   value: summaryPromptPreset,
                   onChange: (event) => chooseSummaryPreset(event.target.value),
                 },
-                  summaryPresets.map((preset) => h('option', {
-                    key: preset.id,
-                    value: preset.id,
-                    title: preset.description || '',
-                  }, preset.name || preset.id)),
+                  h('optgroup', { label: '内置预设' },
+                    builtinSummaryPresets.map((preset) => h('option', {
+                      key: preset.id,
+                      value: preset.id,
+                      title: preset.description || '',
+                    }, preset.name || preset.id)),
+                  ),
+                  customSummaryPresets.length > 0 ? h('optgroup', { label: '我的预设' },
+                    customSummaryPresets.map((preset) => h('option', {
+                      key: preset.id,
+                      value: preset.id,
+                      title: preset.description || '',
+                    }, preset.name || preset.id)),
+                  ) : null,
                   h('option', { value: 'custom' }, '自定义'),
                 ),
                 h('button', { className: 'dsdi-link-btn', onClick: restoreSummaryPreset }, '恢复预设'),
+                h('button', { className: 'dsdi-link-btn', onClick: openSavePreset }, '保存为预设'),
+                activeSummaryPreset && !activeSummaryPreset.builtin
+                  ? h('button', { className: 'dsdi-link-btn', onClick: openDeletePreset }, '删除')
+                  : null,
               ),
               h('textarea', {
                 className: 'dsdi-prompttext',
@@ -1522,11 +1597,10 @@ window.__ModuleLoader__.load({
                 onChange: (event) => editSummaryPrompt(event.target.value),
               }),
               h('div', { className: 'dsdi-promptmeta' },
-                h('span', null, summaryPromptPreset === 'custom' ? '已切换到自定义' : '预设文本可直接编辑'),
+                h('span', null, ''),
                 h('span', null, summaryPromptText.length + ' / ' + summaryPromptLimit),
               ),
               promptError ? h('div', { className: 'dsdi-err' }, promptError) : null,
-              h('div', { className: 'dsdi-promptnote' }, '🔒 系统会自动追加字数与格式约束，无需填写'),
             ) : null,
             h('div', { className: 'dsdi-estimate' }, estimating
               ? ''
@@ -1663,6 +1737,40 @@ window.__ModuleLoader__.load({
               h('div', { style: { flex: '1 1 auto' } }),
               h('button', { className: 'dsdi-btn', onClick: () => setSettingsOpen(false) }, '取消'),
               h('button', { className: 'dsdi-btn primary', disabled: settingsSaving, onClick: saveSettings }, settingsSaving ? '保存中…' : '保存'),
+            ),
+          ),
+        ) : null,
+        presetDialog ? h('div', { className: 'dsdi-dialog-layer' },
+          h('div', { className: 'dsdi-dialog-backdrop', onClick: closePresetDialog }),
+          h('div', { className: 'dsdi-dialog small', role: 'dialog', 'aria-modal': 'true' },
+            h('div', { className: 'dsdi-dialog-header' },
+              h('span', { className: 'dsdi-dialog-title' }, presetDialog.mode === 'delete' ? '删除预设' : '保存为预设'),
+            ),
+            h('div', { className: 'dsdi-cancel-body' },
+              presetDialog.mode === 'delete'
+                ? h('div', { className: 'dsdi-dialognote' }, '删除「' + (presetDialog.preset && presetDialog.preset.name) + '」？内置预设不会受影响。')
+                : h('div', { className: 'dsdi-dialognote' }, '保存当前提示词，之后可在“我的预设”中选择。'),
+              presetDialog.mode === 'save'
+                ? h('div', { className: 'dsdi-field' },
+                  h('span', { className: 'dsdi-optlabel' }, '名称'),
+                  h('input', {
+                    className: 'dsdi-input',
+                    value: presetDialog.name,
+                    maxLength: 40,
+                    placeholder: '给这个预设起个名字',
+                    autoFocus: true,
+                    onChange: (event) => setPresetDialog({ ...presetDialog, name: event.target.value, error: '' }),
+                  }),
+                )
+                : null,
+              presetDialog.error ? h('div', { className: 'dsdi-err' }, presetDialog.error) : null,
+            ),
+            h('div', { className: 'dsdi-dialog-footer' },
+              h('div', { style: { flex: '1 1 auto' } }),
+              h('button', { className: 'dsdi-btn', disabled: presetDialog.busy, onClick: closePresetDialog }, '取消'),
+              presetDialog.mode === 'delete'
+                ? h('button', { className: 'dsdi-btn danger', disabled: presetDialog.busy, onClick: submitDeletePreset }, presetDialog.busy ? '删除中…' : '删除')
+                : h('button', { className: 'dsdi-btn primary', disabled: presetDialog.busy, onClick: submitSavePreset }, presetDialog.busy ? '保存中…' : '保存'),
             ),
           ),
         ) : null,

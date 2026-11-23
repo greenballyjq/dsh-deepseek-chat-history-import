@@ -1,6 +1,6 @@
 {
   "name": "dsh-deepseek-import",
-  "version": "2.12.3",
+  "version": "2.13.0",
   "private": false,
   "type": "module",
   "description": "Import DeepSeek web chat exports into DeepSeek Harness as resumable sessions: official ZIP/JSON, split conversations, browser records, JSONL, merge policies, branch selection, summaries and calibrated cost estimates.",
@@ -55,7 +55,7 @@
     "manifestVersion": 1
   },
   "scripts": {
-    "test": "node scripts/test-merge.mjs && node scripts/test-path.mjs && node scripts/test-sources.mjs",
+    "test": "node scripts/test-merge.mjs && node scripts/test-path.mjs && node scripts/test-sources.mjs && node scripts/test-summary.mjs && node scripts/test-summary-call.mjs",
     "audit": "node scripts/audit-network.mjs",
     "build:client": "node scripts/build-client.mjs"
   }

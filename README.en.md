@@ -12,8 +12,8 @@ All processing is local. The plugin does not request an account password, cookie
 - **Strict detection**: only DeepSeek web conversations. ChatGPT / Claude / Gemini exports are rejected with a reason. `user.json` from the official ZIP is ignored.
 - **Merge and dedupe**: identity by conversation id; newer `updated_at` wins; equal timestamps compare semantic content, then export date and conversation length; unresolved ties are marked as conflicts. Older-only conversations are kept (union) and labelled; duplicate/updated/old-only/new-only counts are shown.
 - **Version selection**: the picker starts on the current version marker or the latest leaf; switching a version follows the longest continuation; a custom leaf can be reopened.
-- **Compression**: keep the last N turns; discard the rest or summarize it with a configured DeepSeek model; choose brief/standard/detailed summary length and a cost cap.
-- **Cost estimate**: one reference estimate before import, actual usage after, peak/off-peak pricing, cache hit/miss, and local calibration that converges over time.
+- **Compression**: keep the last N turns; discard the rest or summarize it with a configured DeepSeek model; choose brief/standard/detailed summary length, a cost cap, and a summary prompt preset (neutral by default, narrative or technical) that you can edit into a custom prompt; the length/format guard is appended by the host.
+- **Cost estimate**: one reference estimate before import, actual usage after, peak/off-peak pricing, cache hit/miss, and local calibration that converges over time. Custom prompt tokens are included in the estimate.
 - **Sessions**: writes native DSH session logs, keeps the original title, numbers repeated imports (`Title (2)`), records summary/usage markdown, and supports stop/continue/keep-partial.
 - **UI**: sidebar Import page, multi-file picker, search, recent files, auto-restore of the last selection, progress for large batches, and short errors with details.
 - **Safety**: no direct network access, no credentials, no telemetry; selected files are read locally; a network audit script is included.
@@ -60,6 +60,7 @@ npm run build:client
 
 - [Merge rules](docs/merge.md)
 - [Cost estimation](docs/cost.md)
+- [Summary prompt](docs/summary-prompt.md)
 - [Version picker](docs/version-picker.md)
 - [Format support](docs/formats.md)
 - [Security](docs/security.md)

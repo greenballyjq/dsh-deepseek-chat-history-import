@@ -18,6 +18,7 @@ lib/
   jobs.js             导入任务与进度
   routes.js           HTTP 路由
   profile.js          模型/价格/设置
+  summary-prompt.js   摘要预设、固定约束、拼装与截断
   calibrate.js        费用校准
   tokens.js           官方比例 token 估算
   store.js            最近文件、lastSet、上传清理
@@ -44,6 +45,8 @@ npm test
 - `test-merge.mjs`：合并/去重/冲突/官方与浏览器混合
 - `test-path.mjs`：初始最新、切换最长、重选
 - `test-sources.mjs`：文件校验、缺失、损坏、去重
+- `test-summary.mjs`：预设/自定义、隐藏约束、旧占位符、截断、提示词费用
+- `test-summary-call.mjs`：用假 LLM 验证实际 system prompt 拼装与截断
 
 网络审计：
 
@@ -78,7 +81,7 @@ npm run audit
 
 ## CI
 
-`.github/workflows/test.yml` 在 push/PR 时运行 `npm test`、`npm run audit`，并检查主要文件语法。
+本地运行 `npm test` 与 `npm run audit` 即可。仓库不内置 CI 工作流；如需 GitHub Actions，请在具备 workflow 权限的账号中自行接入。
 
 ## 约定
 

@@ -65,6 +65,12 @@ window.__ModuleLoader__.load({
 .dsdi-option{display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-size:12px;line-height:1.5}
 .dsdi-option input{margin-top:2px}
 .dsdi-field{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--dsw-alias-label-secondary,#8a8f99);min-height:30px}
+.dsdi-promptblock{display:flex;flex-direction:column;gap:5px;padding:2px 0 0}
+.dsdi-prompthead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--dsw-alias-label-secondary,#8a8f99);min-height:28px}
+.dsdi-prompttext{display:block;width:100%;min-height:92px;max-height:220px;resize:vertical;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1,#d9dce1);background:var(--dsw-alias-bg-layer-1,#fff);color:inherit;font-family:inherit;font-size:12px;line-height:1.6;outline:none;box-sizing:border-box}
+.dsdi-prompttext:focus{border-color:var(--dsw-alias-brand-primary,#4d6bfe)}
+.dsdi-promptmeta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;line-height:1.5;color:var(--dsw-alias-label-secondary,#8a8f99)}
+.dsdi-promptnote{font-size:11px;line-height:1.5;color:var(--dsw-alias-label-secondary,#8a8f99)}
 .dsdi-num{width:76px;height:28px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1,#d9dce1);background:var(--dsw-alias-bg-layer-1,#fff);color:inherit;font-size:12px;padding:0 8px;box-sizing:border-box}
 .dsdi-select{height:28px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1,#d9dce1);background:var(--dsw-alias-bg-layer-1,#fff);color:inherit;font-size:12px;padding:0 8px}
 .dsdi-footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0}
@@ -671,6 +677,10 @@ window.__ModuleLoader__.load({
       const [mode, setMode] = React.useState('placeholder')
       const [retainTurns, setRetainTurns] = React.useState(100)
       const [summaryLevel, setSummaryLevel] = React.useState('standard')
+      const [summaryPromptPreset, setSummaryPromptPreset] = React.useState('neutral')
+      const [summaryPromptText, setSummaryPromptText] = React.useState('')
+      const [summaryPromptBase, setSummaryPromptBase] = React.useState('neutral')
+      const [customPromptDraft, setCustomPromptDraft] = React.useState('')
       const [maxCost, setMaxCost] = React.useState(1)
       const [estimate, setEstimate] = React.useState(null)
       const [estimating, setEstimating] = React.useState(false)
@@ -693,6 +703,7 @@ window.__ModuleLoader__.load({
       const syncedJobRef = React.useRef('')
       const fileInputRef = React.useRef(null)
       const autoLoadedRef = React.useRef(false)
+      const promptInitRef = React.useRef(false)
 
       const currentPath = () => loadedPath || filePath
       const MAX_FILES = 5000
@@ -745,6 +756,15 @@ window.__ModuleLoader__.load({
           if (Number.isFinite(defaults.retainTurns)) setRetainTurns(Math.min(5000, Math.max(1, Math.round(defaults.retainTurns))))
           if (defaults.summaryLevel === 'brief' || defaults.summaryLevel === 'standard' || defaults.summaryLevel === 'detailed') setSummaryLevel(defaults.summaryLevel)
           if (Number.isFinite(defaults.maxCostCny)) setMaxCost(Math.min(20, Math.max(0, defaults.maxCostCny)))
+          const presets = Array.isArray(payload.summaryPresets) ? payload.summaryPresets : []
+          const defaultId = payload.defaultSummaryPrompt || 'neutral'
+          const initial = presets.find((preset) => preset && preset.id === defaultId) || presets[0]
+          if (!promptInitRef.current && initial) {
+            promptInitRef.current = true
+            setSummaryPromptPreset(initial.id)
+            setSummaryPromptBase(initial.id)
+            setSummaryPromptText(initial.text || '')
+          }
         }).catch(fail)
         return () => { cancelled = true }
       }, [])
@@ -752,14 +772,47 @@ window.__ModuleLoader__.load({
       const levels = (profileInfo && profileInfo.summaryLevels) || DEFAULT_LEVELS
       const limits = (profileInfo && profileInfo.limits) || DEFAULT_LIMITS
       const summaryChars = levels[summaryLevel] || levels.standard || 1500
+      const summaryPresets = (profileInfo && Array.isArray(profileInfo.summaryPresets)) ? profileInfo.summaryPresets : []
+      const summaryPromptLimit = Number(profileInfo && profileInfo.maxSummaryPromptChars) > 0 ? Number(profileInfo.maxSummaryPromptChars) : 4000
+      const promptError = mode === 'summary' && summaryPromptPreset === 'custom' && !summaryPromptText.trim()
+        ? '摘要提示词不能为空'
+        : (mode === 'summary' && summaryPromptText.length > summaryPromptLimit ? '摘要提示词不能超过 ' + summaryPromptLimit + ' 字' : '')
       const compressPayload = () => ({
         mode,
         retainTurns,
         summaryChars,
         maxCostCny: maxCost,
         ...(modelChoice ? { model: modelChoice } : {}),
+        ...(mode === 'summary' ? { summaryPrompt: { preset: summaryPromptPreset, text: summaryPromptText } } : {}),
       })
       const pathPayload = () => ({ pathRule, leafId })
+
+      const chooseSummaryPreset = (value) => {
+        if (value === 'custom') {
+          const draft = customPromptDraft || summaryPromptText
+          setSummaryPromptPreset('custom')
+          setSummaryPromptText(draft || '')
+          return
+        }
+        const preset = summaryPresets.find((item) => item && item.id === value)
+        if (!preset) return
+        setSummaryPromptPreset(preset.id)
+        setSummaryPromptBase(preset.id)
+        setSummaryPromptText(preset.text || '')
+      }
+      const editSummaryPrompt = (value) => {
+        setSummaryPromptText(value)
+        setCustomPromptDraft(value)
+        if (summaryPromptPreset !== 'custom') setSummaryPromptPreset('custom')
+      }
+      const restoreSummaryPreset = () => {
+        const preset = summaryPresets.find((item) => item && item.id === summaryPromptBase)
+          || summaryPresets.find((item) => item && item.id === 'neutral')
+          || summaryPresets[0]
+        if (!preset) return
+        setSummaryPromptPreset(preset.id)
+        setSummaryPromptText(preset.text || '')
+      }
 
       const filtered = React.useMemo(() => {
         const q = query.trim()
@@ -772,6 +825,11 @@ window.__ModuleLoader__.load({
         setEstimateError('')
         const target = currentPath()
         if (!selectedId || !target) return undefined
+        if (promptError) {
+          setEstimateError(promptError)
+          setEstimating(false)
+          return undefined
+        }
         setEstimating(true)
         let cancelled = false
         const timer = setTimeout(async () => {
@@ -785,7 +843,7 @@ window.__ModuleLoader__.load({
           }
         }, 400)
         return () => { cancelled = true; clearTimeout(timer); setEstimating(false) }
-      }, [mode, selectedId, loadedPath, filePath, retainTurns, summaryLevel, maxCost, pathRule, leafId, modelChoice])
+      }, [mode, selectedId, loadedPath, filePath, retainTurns, summaryLevel, maxCost, pathRule, leafId, modelChoice, summaryPromptPreset, summaryPromptText, promptError])
 
       const onLoad = async (target) => {
         const list = Array.isArray(target)
@@ -1008,7 +1066,7 @@ window.__ModuleLoader__.load({
       }, [cancelDialog])
 
       const onImport = async () => {
-        if (!selectedId || busy) return
+        if (!selectedId || busy || promptError) return
         clearError()
         setNotice('')
         setJobExpanded(false)
@@ -1438,6 +1496,38 @@ window.__ModuleLoader__.load({
               }),
               h('span', null, '元'),
             ) : null,
+            mode === 'summary' && summaryPresets.length > 0 ? h('div', { className: 'dsdi-promptblock' },
+              h('div', { className: 'dsdi-prompthead' },
+                h('span', null, '提示词'),
+                h('select', {
+                  className: 'dsdi-select',
+                  value: summaryPromptPreset,
+                  onChange: (event) => chooseSummaryPreset(event.target.value),
+                },
+                  summaryPresets.map((preset) => h('option', {
+                    key: preset.id,
+                    value: preset.id,
+                    title: preset.description || '',
+                  }, preset.name || preset.id)),
+                  h('option', { value: 'custom' }, '自定义'),
+                ),
+                h('button', { className: 'dsdi-link-btn', onClick: restoreSummaryPreset }, '恢复预设'),
+              ),
+              h('textarea', {
+                className: 'dsdi-prompttext',
+                rows: 4,
+                maxLength: summaryPromptLimit,
+                value: summaryPromptText,
+                placeholder: '选择预设，或直接输入自定义提示词',
+                onChange: (event) => editSummaryPrompt(event.target.value),
+              }),
+              h('div', { className: 'dsdi-promptmeta' },
+                h('span', null, summaryPromptPreset === 'custom' ? '已切换到自定义' : '预设文本可直接编辑'),
+                h('span', null, summaryPromptText.length + ' / ' + summaryPromptLimit),
+              ),
+              promptError ? h('div', { className: 'dsdi-err' }, promptError) : null,
+              h('div', { className: 'dsdi-promptnote' }, '🔒 系统会自动追加字数与格式约束，无需填写'),
+            ) : null,
             h('div', { className: 'dsdi-estimate' }, estimating
               ? ''
               : (estimateError ? '无法预估：' + estimateError : estimateText())),
@@ -1448,7 +1538,7 @@ window.__ModuleLoader__.load({
                 h('div', { className: 'dsdi-footer' },
           h('button', {
             className: 'dsdi-btn primary',
-            disabled: busy || !selectedId || estimating || profileBroken,
+            disabled: busy || !selectedId || estimating || profileBroken || Boolean(promptError),
             onClick: onImport,
           }, busy ? '导入中…' : (estimating ? '计算中…' : '导入')),
           h('span', { className: 'dsdi-result' }, selected ? '已选择：' + (selected.title || '无标题') : '先选择一个对话'),

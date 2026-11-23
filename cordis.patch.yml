@@ -1,0 +1,3 @@
+- insert:
+    - id: deepseek-chat-history-import
+      name: dsh-deepseek-chat-history-import

@@ -1,0 +1,62 @@
+{
+  "name": "dsh-deepseek-chat-history-import",
+  "version": "2.13.2",
+  "private": false,
+  "type": "module",
+  "description": "Import DeepSeek web chat history into DeepSeek Harness as resumable sessions: official ZIP/JSON, split conversations, browser records, JSONL, merge policies, branch selection, summaries and calibrated cost estimates.",
+  "license": "MIT",
+  "author": "greenballyjq",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/greenballyjq/dsh-deepseek-chat-history-import.git"
+  },
+  "homepage": "https://github.com/greenballyjq/dsh-deepseek-chat-history-import#readme",
+  "bugs": {
+    "url": "https://github.com/greenballyjq/dsh-deepseek-chat-history-import/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "deepseek",
+    "import",
+    "session",
+    "conversation",
+    "cost-estimate"
+  ],
+  "engines": {
+    "node": ">=22.19"
+  },
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib/",
+    "data/",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer"
+      ]
+    },
+    "manifestVersion": 1
+  },
+  "scripts": {
+    "test": "node scripts/test-merge.mjs && node scripts/test-path.mjs && node scripts/test-sources.mjs && node scripts/test-summary.mjs && node scripts/test-summary-call.mjs",
+    "audit": "node scripts/audit-network.mjs",
+    "build:client": "node scripts/build-client.mjs"
+  }
+}

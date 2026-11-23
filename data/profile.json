@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-04",
+  "defaultModel": "deepseek-flash",
+  "models": {
+    "deepseek-flash": {
+      "provider": "deepseek-account",
+      "name": "DeepSeek-V4.1-Flash",
+      "tokens": {
+        "cjkPerChar": 0.6,
+        "latinPerChar": 0.3
+      },
+      "context": {
+        "window": 1048576,
+        "minRetainTurns": 4,
+        "systemOverhead": 40000,
+        "budgetRatio": 0.8
+      },
+      "pricing": {
+        "timeZone": "Asia/Shanghai",
+        "peakWindows": [
+          {
+            "days": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "from": "09:00",
+            "to": "12:00"
+          },
+          {
+            "days": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "from": "14:00",
+            "to": "18:00"
+          }
+        ],
+        "peak": {
+          "cacheHit": 0.04,
+          "cacheMiss": 2,
+          "output": 8
+        },
+        "offPeak": {
+          "cacheHit": 0.02,
+          "cacheMiss": 1,
+          "output": 4
+        }
+      },
+      "summary": {
+        "promptTokens": 300,
+        "outputRatio": 0.04,
+        "maxTokensPerChar": 3,
+        "maxTokensFloor": 2048,
+        "reasoningEffort": "off",
+        "levels": {
+          "brief": 800,
+          "standard": 1500,
+          "detailed": 2500
+        },
+        "chunkChars": 60000,
+        "maxCharsFactor": 2
+      },
+      "estimation": {
+        "messageOverhead": 4,
+        "tailSafety": 200,
+        "summaryFactor": 2,
+        "minOutputChars": 120,
+        "outputTokensPerSegment": 600,
+        "cacheHitRatio": 0,
+        "ewmaAlpha": 0.2,
+        "coldCacheHitRatio": 0,
+        "warmCacheHitRatio": 0.95,
+        "inputScale": 0.82,
+        "outputScale": 0.6
+      }
+    },
+    "deepseek-v4-pro": {
+      "provider": "deepseek-account",
+      "name": "DeepSeek-V4-Pro-0813",
+      "tokens": {
+        "cjkPerChar": 0.6,
+        "latinPerChar": 0.3
+      },
+      "context": {
+        "window": 1048576,
+        "minRetainTurns": 4,
+        "systemOverhead": 40000,
+        "budgetRatio": 0.8
+      },
+      "pricing": {
+        "timeZone": "Asia/Shanghai",
+        "peakWindows": [
+          {
+            "days": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "from": "09:00",
+            "to": "12:00"
+          },
+          {
+            "days": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "from": "14:00",
+            "to": "18:00"
+          }
+        ],
+        "peak": {
+          "cacheHit": 0.3,
+          "cacheMiss": 9,
+          "output": 27
+        },
+        "offPeak": {
+          "cacheHit": 0.15,
+          "cacheMiss": 4.5,
+          "output": 13.5
+        }
+      },
+      "summary": {
+        "promptTokens": 300,
+        "outputRatio": 0.04,
+        "maxTokensPerChar": 3,
+        "maxTokensFloor": 2048,
+        "reasoningEffort": "off",
+        "levels": {
+          "brief": 800,
+          "standard": 1500,
+          "detailed": 2500
+        },
+        "chunkChars": 60000,
+        "maxCharsFactor": 2
+      },
+      "estimation": {
+        "messageOverhead": 4,
+        "tailSafety": 200,
+        "summaryFactor": 2,
+        "minOutputChars": 120,
+        "outputTokensPerSegment": 600,
+        "cacheHitRatio": 0,
+        "ewmaAlpha": 0.2,
+        "coldCacheHitRatio": 0,
+        "warmCacheHitRatio": 0.95,
+        "inputScale": 0.82,
+        "outputScale": 0.6
+      }
+    }
+  }
+}

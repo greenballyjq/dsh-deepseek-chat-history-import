@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="0.55" stop-color="#12233f"/>
+      <stop offset="1" stop-color="#0b1220"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4d6bfe"/>
+      <stop offset="1" stop-color="#6ee7ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" rx="24" fill="url(#bg)"/>
+  <circle cx="1020" cy="60" r="180" fill="#4d6bfe" opacity="0.12"/>
+  <circle cx="1080" cy="250" r="120" fill="#6ee7ff" opacity="0.08"/>
+  <text x="72" y="118" fill="#e8eefc" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="44" font-weight="700">DeepSeek → DSH</text>
+  <text x="72" y="168" fill="#9fb2d4" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="22">把网页对话历史导入 DeepSeek Harness，继续聊</text>
+  <rect x="72" y="204" width="460" height="4" rx="2" fill="url(#line)"/>
+  <text x="72" y="246" fill="#6f86ab" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="16">ZIP / JSON / JSONL / IndexedDB · 合并去重 · 分支选择 · 费用预估</text>
+</svg>

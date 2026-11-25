@@ -9,7 +9,7 @@
 ```text
 输入 tokens = 官方比例估算的 chunk tokens × inputScale + promptTokensPerChunk
 
-其中 `promptTokensPerChunk` 由实际拼装后的 system prompt（用户可见提示词 + 宿主固定约束）估算；`profile.json` 的 `summary.promptTokens` 只是缺失时的兜底，自定义提示词变长会同步增加预估。
+其中 `promptTokensPerChunk` 由固定 System 提示 + 用户消息里的风格要求与数据边界估算；`profile.json` 的 `summary.promptTokens` 只是缺失时的兜底，自定义风格变长会同步增加预估。
 
 命中 tokens = round(输入 tokens × 命中率)
 未命中 tokens = 输入 tokens - 命中 tokens

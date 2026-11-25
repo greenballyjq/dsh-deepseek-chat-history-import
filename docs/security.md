@@ -26,7 +26,7 @@
   - Linux：`$XDG_DATA_HOME/dsh-deepseek-import` 或 `~/.local/share/dsh-deepseek-import`
   - macOS：`~/Library/Application Support/dsh-deepseek-import`
 - 「插件配置 → 导入位置」是存放新工作区文件夹的父目录，默认在用户目录下的 `DeepSeek-Imports`
-- 记忆文件的 manifest 只写来源文件名、标题、分支、轮次、摘要提示词名称/指纹与实际用量；不写绝对路径
+- 记忆文件的 manifest 只写来源文件名、标题、分支、轮次、摘要提示词名称/指纹、实际用量，以及摘要中途失败时的失败块/轮次/错误短文案；不写绝对路径、完整对话或提示词全文
 - 自定义摘要预设保存在插件数据目录（`summary-presets.json`），不上传
 
 ## 附件

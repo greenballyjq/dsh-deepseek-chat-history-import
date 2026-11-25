@@ -1,6 +1,6 @@
 {
   "name": "dsh-deepseek-chat-history-import",
-  "version": "2.16.0",
+  "version": "2.16.1",
   "private": false,
   "type": "module",
   "description": "Import DeepSeek web chat history into DeepSeek Harness as resumable sessions: official ZIP/JSON, split conversations, browser records, JSONL, merge policies, branch selection, summaries and calibrated cost estimates.",

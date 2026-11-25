@@ -57,9 +57,17 @@ npm test
 - `test-load.mjs`：`loadStart/loadStatus` 进度、并发拒绝、缺失文件、v4 拒绝
 - `test-import.mjs`：mock DSH 服务跑完整导入，验证图片块、状态说明、三种压缩模式的记忆文件
 - `test-memory.mjs`：统一记忆目录、manifest、分片、thinking、顶部文案
-- `test-summary.mjs`：预设/自定义、隐藏约束、截断、提示词费用
-- `test-summary-call.mjs`：用假 LLM 验证实际 system prompt 拼装与截断
+- `test-summary.mjs`：预设/自定义、风格与固定 System 分离、截断、提示词费用
+- `test-summary-call.mjs`：用假 LLM 验证 System 固定、风格在 User 消息、单段输出
+- `test-summary-failure.mjs`：失败重试、后半段失败保留前段、第一段失败硬失败
 - `test-fixtures.mjs`：共享的 ZIP fixture 写入器（不单独运行）
+
+## 摘要提示词与失败处理
+
+- `lib/summary-prompt.js`：`buildSystemPrompt(limit)` 固定 System；`buildUserPrompt(style, transcript)` 组合风格与 `<transcript>`；`normalizeSummaryText()` 把输出收成一段
+- `lib/summary.js`：分块最多重试一次；`SummaryChunkError` 带块号、轮次、attempts；后半段失败返回部分结果
+- `lib/session.js`：部分摘要写入会话和 `deepseek-memory/`；第一段失败才硬失败；不再静默降级为不保留
+- 修改这些规则时同步更新 `docs/summary-prompt.md`、`docs/memory.md` 和 `docs/troubleshooting.md`
 
 网络审计：
 

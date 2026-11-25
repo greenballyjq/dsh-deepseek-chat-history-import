@@ -46,7 +46,14 @@
     "chars": 1500,
     "prompt": { "name": "中性", "fingerprint": "..." },
     "usage": { "inputTokens": 0, "cacheReadTokens": 0, "outputTokens": 0 },
-    "partial": false
+    "partial": true,
+    "failure": {
+      "message": "模型调用失败",
+      "chunkIndex": 4,
+      "fromTurn": 31,
+      "toTurn": 40,
+      "attempts": 2
+    }
   }
 }
 ```
@@ -57,6 +64,7 @@
 - `thinking`：是否生成 `thinking.md`
 - `attachments`：附件存储方式；当前为 `dsh`
 - `summary`：仅摘要模式存在；`usage` 用于重复导入的费用复用
+- `summary.partial` / `summary.failure`：只在摘要中途失败、保留了已完成分段时出现；`failure` 记录失败块、轮次范围、原因与尝试次数
 - 不记录逐条消息索引、摘要分段范围或附件 id；这些要么在 `memory.md` 标题里，要么在 DSH 会话/附件存储里
 
 ## memory.md
@@ -137,4 +145,4 @@ DSH 的 image/file content block 只接受附件引用，没有工作区路径�
 - 不保留：`较早的 N 轮对话已丢弃，保留最近 K 轮原文。`
 - 摘要：`较早的 N 轮对话已概括为摘要，保留最近 K 轮原文。`，摘要正文紧跟其后
 - 完整存档：`较早的 N 轮对话已完整存档，保留最近 K 轮原文。`，下一行给出 `deepseek-memory/memory.md` 路径
-- 部分摘要：同一前缀，说明已生成/未生成的轮次范围
+- 部分摘要：同一前缀，说明已生成/未生成的轮次范围；结果卡片同时显示失败原因和重试次数

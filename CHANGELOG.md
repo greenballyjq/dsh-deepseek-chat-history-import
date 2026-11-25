@@ -1,5 +1,19 @@
 # 变更日志
 
+## 2.16.0
+
+- 导入结果统一使用 `deepseek-memory/` 记忆目录：`manifest.json`（最小元信息）、`memory.md`（正文）、可选 `thinking.md`；大文件自动分片，`memory.md` 作索引
+- 新增「完整存档」压缩方式：不调用模型，把较早轮次全文写入 `deepseek-memory/memory.md`，会话只保留最近 N 轮
+- 摘要模式改为写统一记忆文件，摘要按段记录轮次范围；不再生成旧的 `deepseek-import-summary.md`
+- 「不保留」不再生成 `deepseek-import-record.md` 日志文件
+- 记忆 manifest 只保留定位/兼容需要的字段：格式版本、kind、标题、来源、分支、导入时间、轮次、memory 文件、thinking、附件方式和摘要用量；删除逐消息索引与重复的分段元信息
+- 思考强度从开发者配置移到「插件配置默认值 + 单次摘要导入选择」，档位 `Off / Low / High / Max`，默认 `Off`；非 `Off` 时显示费用警告
+- 上下文预算占比从 72% 调整为 60%
+- 完整存档可选保留 AI 思考（`thinking.md`），默认关闭；摘要模式不保留思考
+- 附件继续写入 DSH 附件存储（content block 只接受附件引用，没有工作区路径变体）；记忆文件只记录附件名称
+- 测试新增 `test-memory.mjs`；`test-import` 覆盖不保留无文件、完整存档、摘要分段三种模式
+- 清理旧记录文件写入、重复 manifest 字段与旧位置参数
+
 ## 2.15.0
 
 - 支持新版官方导出（`export_format_version: 3`）：`manifest.json` + `chat_session_index.json` + `chat_sessions/<id>.json`，以及解压后的单个会话文件

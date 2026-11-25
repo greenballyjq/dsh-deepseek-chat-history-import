@@ -34,6 +34,7 @@
 
 | 参数 | 当前默认 | 说明 |
 |---|---|---|
+| `context.budgetRatio` | 0.6 | 上下文预算占比；超过后压缩较早内容 |
 | `tokens.cjkPerChar` | 0.6 | 中文字符 token 比 |
 | `tokens.latinPerChar` | 0.3 | 英文字符 token 比 |
 | `summary.promptTokens` | 300 | 每段提示固定开销（估算兜底） |
@@ -42,7 +43,6 @@
 | `summary.levels` | `[{id,name,chars}]`：简短 800 / 标准 1500 / 详细 2500 | 摘要档位（数组，可在开发者配置里改） |
 | `summary.maxTokensPerChar` | 3 | 每段输出 token 上限系数 |
 | `summary.maxTokensFloor` | 2048 | 每段输出 token 下限 |
-| `summary.reasoningEffort` | `off` | 摘要是否开启思考；默认关闭 |
 | `estimation.inputScale` | 0.82 | 输入校准初始值 |
 | `estimation.outputScale` | 0.6 | 输出校准初始值 |
 | `estimation.coldCacheHitRatio` | 0 | 冷启动命中率初始值 |
@@ -51,6 +51,8 @@
 | `estimation.outputTokensPerSegment` | 600 | 每段输出 tokens 参考值 |
 | `pricing.peak` / `offPeak` | 见下 | 峰谷单价（元 / 百万 tokens） |
 | `pricing.peakWindows` | 工作日 9:00–12:00、14:00–18:00 | 北京时间；其余为空闲 |
+
+思考强度不在 `profile.json` 里：插件配置保存「默认思考强度」（默认 `Off`），每次摘要导入可在 `Off / Low / High / Max` 中临时选择。只有摘要模式产生模型费用；「不保留」和「完整存档」不调用模型。
 
 当前价格：
 
@@ -102,7 +104,8 @@
 - 模型实际 token 与官方比例估算有差异
 - 缓存命中取决于服务端状态，本地无法完全知道
 - 摘要长度、模型版本、语言混合比例都会影响
-- 摘要默认不开启思考（`reasoningEffort: off`）；如果通过开发者配置开启，推理 token 会按输出计费，而当前估算只覆盖摘要正文，实际费用会高于预估
+- 摘要思考默认关闭；如果单次导入选择 `Low/High/Max`，推理 token 按输出计费，而当前估算只覆盖摘要正文，实际费用会高于预估
+- 「不保留」与「完整存档」不调用模型，没有 API 费用
 - 校准需要样本；样本少时误差更大
 
 建议：

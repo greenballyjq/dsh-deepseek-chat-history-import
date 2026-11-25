@@ -20,7 +20,8 @@ lib/
   zip.js              无依赖惰性 ZIP 读取
   load.js             缓存、合并、统计、加载任务数据
   planner.js          上下文规划、摘要分块、费用估算
-  session.js          DSH 会话写入、工作区、记录 md
+  memory.js           统一记忆目录、manifest、memory.md、thinking.md、分片
+  session.js          DSH 会话写入、工作区、记忆文件
   jobs.js             导入任务与进度
   routes.js           HTTP 路由（load/estimate/transcript/import 等）
   profile.js          模型/价格/设置/开发者配置
@@ -54,7 +55,8 @@ npm test
 - `test-sources.mjs`：文件校验、缺失、损坏、v3 识别、异步加载
 - `test-attachments.mjs`：附件保存、去重、缺失、路径穿越、状态标注
 - `test-load.mjs`：`loadStart/loadStatus` 进度、并发拒绝、缺失文件、v4 拒绝
-- `test-import.mjs`：mock DSH 服务跑完整导入，验证图片块与状态说明
+- `test-import.mjs`：mock DSH 服务跑完整导入，验证图片块、状态说明、三种压缩模式的记忆文件
+- `test-memory.mjs`：统一记忆目录、manifest、分片、thinking、顶部文案
 - `test-summary.mjs`：预设/自定义、隐藏约束、截断、提示词费用
 - `test-summary-call.mjs`：用假 LLM 验证实际 system prompt 拼装与截断
 - `test-fixtures.mjs`：共享的 ZIP fixture 写入器（不单独运行）
@@ -98,7 +100,8 @@ npm run audit
 - 估算：`estimateSummaryCost`
 - 校准：`recordSummaryChunk`
 - 参数：`data/profile.json` 的 `estimation` / `pricing` / `summary`；本机 `profile.json` 覆盖与 `calibration.json`
-- 摘要默认 `reasoningEffort: off`；如果通过开发者配置开启思考，当前估算不包含推理 token
+- 思考强度：插件配置保存默认值，单次摘要导入可改；`profile.json` 不再保存 `summary.reasoningEffort`
+- 摘要默认 `Off`；如果单次选择非 `Off`，当前估算不包含推理 token
 - 改公式时同步更新 `docs/cost.md`
 
 ## CI

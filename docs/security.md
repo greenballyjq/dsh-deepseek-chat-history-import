@@ -20,13 +20,13 @@
 
 - DSH 会话日志（导入结果，含图片/文件附件引用）
 - DSH 附件存储（导入的图片与文件）
-- DSH 工作区目录（按对话标题创建，重复时编号）
+- DSH 工作区目录（按对话标题创建，重复时编号）；摘要/完整存档还会写入工作区内的 `deepseek-memory/`（`manifest.json`、`memory.md`、可选 `thinking.md` 与分片）
 - 插件数据目录（目录名沿用旧项目名 `dsh-deepseek-import`，避免升级丢失已有上传/设置/校准）：
   - Windows：`%LOCALAPPDATA%\dsh-deepseek-import`
   - Linux：`$XDG_DATA_HOME/dsh-deepseek-import` 或 `~/.local/share/dsh-deepseek-import`
   - macOS：`~/Library/Application Support/dsh-deepseek-import`
-- 导入位置由「插件配置 → 导入位置」决定，默认在用户目录下的 `DeepSeek-Imports`
-- 摘要旁的记录只写提示词名称与短指纹，不写自定义提示词全文
+- 「插件配置 → 导入位置」是存放新工作区文件夹的父目录，默认在用户目录下的 `DeepSeek-Imports`
+- 记忆文件的 manifest 只写来源文件名、标题、分支、轮次、摘要提示词名称/指纹与实际用量；不写绝对路径
 - 自定义摘要预设保存在插件数据目录（`summary-presets.json`），不上传
 
 ## 附件
@@ -37,6 +37,7 @@
 - 同一附件在一次导入中只保存一次
 - 旧版官方导出和浏览器记录没有附件本体：前者只保留文件名，后者的 `signed_path` 不下载
 - 附件写入 DSH 附件服务，不写到插件目录之外
+- DSH 的 image/file content block 只接受附件引用，没有工作区路径变体，因此不会把附件复制进 `deepseek-memory/`；删除工作区不会删除 DSH 附件存储里的对象
 
 ## 上传副本
 

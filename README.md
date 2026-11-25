@@ -61,14 +61,15 @@
 
 ### 6. 导入设置
 
-- **保留最近 N 轮**，超出部分选择丢弃或压缩
-- **压缩方式**：
-  - 占位：不调用模型，只保留占位摘要
-  - 摘要：调用你配置的 DeepSeek 模型生成摘要（默认不开启思考；只有开发者配置能改每个模型的“思考强度”）
+- **保留最近 N 轮**，超出部分三选一：
+  - **不保留**：不调用模型，也不生成记忆文件
+  - **概括为摘要**：调用你配置的 DeepSeek 模型生成摘要，写回会话，并在工作区的 `deepseek-memory/` 留档
+  - **完整存档**：不调用模型，较早轮次全文写入 `deepseek-memory/memory.md`；可选单独保存 AI 思考
 - **摘要长度**：简短 / 标准 / 详细（由模型配置里的档位决定）
 - **摘要提示词**：中性（默认）/ 叙事 / 技术；选中后显示原文，可直接编辑，编辑自动切换为「自定义」；可保存为「我的预设」，自定义预设可删除，内置预设不可删（[规则](docs/summary-prompt.md)）
-- **费用上限**：估算超过上限时阻止导入
-- **导入位置**、**摘要模型**、**默认值**都可在插件配置里修改；开发者配置可编辑每个模型的上下文、价格、摘要与估算参数
+- **思考强度**：每次摘要导入可选择 `Off / Low / High / Max`；初始值来自插件配置的「默认思考强度」，默认 `Off`
+- **费用上限**：估算超过上限时阻止调用模型
+- **导入位置**、**摘要模型**、**默认值**、**默认思考强度**都可在插件配置里修改；开发者配置可编辑每个模型的上下文、价格、摘要与估算参数，但不再包含思考强度
 
 ### 7. 费用预估与校准
 
@@ -77,17 +78,26 @@
 - 按模型版本、峰谷时段、输入/输出 token、缓存命中/未命中计价
 - 学习参数保存在本机校准文件；校准后会逐步贴近实际
 - 旧工作区记录可作为同计划参考，避免重复导入时仍按冷启动估价
-- 摘要默认关闭思考；如果开发者在模型配置里开启，推理 token 会按输出计费，而当前估算只覆盖摘要正文，实际费用会高于预估
+- 只有摘要模式产生模型费用；不保留与完整存档都不调用模型
+- 摘要思考不是 `Off` 时，推理 token 按输出计费，但当前预估只覆盖摘要正文；界面会明确提示“不含思考”，实际费用会更高
 
 详见 [docs/cost.md](docs/cost.md)。
 
-### 8. 写入 DSH 会话
+### 8. 写入 DSH 会话与记忆文件
 
 - 每段对话写入 DSH 原生会话日志，不修改 DSH 源码
 - 会话标题优先使用原对话标题；重复导入自动编号为 `标题 (2)`、`标题 (3)`…
-- 可选生成摘要 / 记录 md，包含保留轮数、摘要长度、实际用量
+- 摘要与完整存档会在工作区生成统一格式的记忆目录：
+  - `deepseek-memory/manifest.json`：唯一元信息
+  - `deepseek-memory/memory.md`：摘要分段或完整对话正文
+  - `deepseek-memory/thinking.md`：仅完整存档且勾选“保留 AI 思考”时生成
+  - 大文件会自动拆成 `memory-0001-0400.md` 等分片，`memory.md` 作索引
+- 不保留模式不生成记忆文件；全部保留也不生成
+- 附件仍写入 DSH 附件存储；记忆文件只记录附件名称，不复制附件本体
 - 支持「停止导入」：继续、保留已完成部分并停止、停止并丢弃
 - 写入前做会话格式自检；失败时给出短文案 + 详情
+
+记忆文件格式详见 [docs/memory.md](docs/memory.md)。
 
 ### 9. 面板
 
@@ -198,15 +208,23 @@ dsh plugin --profile web add link:.
 默认取并集，并标记「只出现在较早导出」。导出没有删除记录，保留比静默丢弃更安全；只想要当前状态就只选最新那份。
 
 **预估和实际差很多？**  
-预估是启发式；校准会逐步贴近实际。若开了摘要思考，推理 token 目前不计入预估，实际会更高。见 [docs/cost.md](docs/cost.md)。
+预估是启发式；校准会逐步贴近实际。若摘要思考不是 `Off`，推理 token 目前不计入预估，实际会更高。见 [docs/cost.md](docs/cost.md)。
 
 **摘要调用失败/超过费用上限？**  
-检查摘要模型配置与费用上限；也可以改用「占位」压缩，不调用模型。
+检查摘要模型配置与费用上限；也可以改用「不保留」或「完整存档」，两者都不调用模型。
+
+**完整存档会花多少钱？**
+
+不调用模型，没有 API 费用；只在工作区写文件。文件很大时会自动分片。
+
+**不保留还会生成记录文件吗？**
+
+不会。旧版本可能留下 `deepseek-import-record.md` / `deepseek-import-summary.md`，新导入只使用 `deepseek-memory/`；旧文件不会自动删除。
 
 **导入了一半可以停吗？**  
 可以。弹窗里选择继续、保留已完成部分并停止、停止并丢弃。
 
-更多见 [docs/troubleshooting.md](docs/troubleshooting.md)；导出格式细节见 [docs/formats.md](docs/formats.md) 与 [docs/官方导出格式对照.md](docs/官方导出格式对照.md)。
+更多见 [docs/troubleshooting.md](docs/troubleshooting.md)；导出格式细节见 [docs/formats.md](docs/formats.md) 与 [docs/官方导出格式对照.md](docs/官方导出格式对照.md)；记忆文件格式见 [docs/memory.md](docs/memory.md)。
 
 ## 开发
 
@@ -223,7 +241,8 @@ lib/
   zip.js                无依赖惰性 ZIP 读取
   load.js               缓存、合并、统计
   planner.js            上下文规划、摘要分块、费用估算
-  session.js            DSH 会话写入、工作区、记录 md
+  memory.js             统一记忆目录、manifest、memory.md、thinking.md、分片
+  session.js            DSH 会话写入、工作区、记忆文件
   jobs.js               导入任务与进度
   routes.js             HTTP 路由
   profile.js            模型/价格/设置/开发者配置
@@ -237,7 +256,7 @@ scripts/                构建、测试、网络审计
 ```
 
 ```bash
-npm test               # 合并 / 路径 / 来源 / 附件 / 加载 / 导入 / 摘要
+npm test               # 合并 / 路径 / 来源 / 附件 / 加载 / 导入 / 摘要 / 记忆
 npm run audit          # 确认没有直接网络访问
 npm run build:client   # 从 client/src 生成 client.js
 ```
@@ -249,8 +268,9 @@ npm run build:client   # 从 client/src 生成 client.js
 - `test-sources.mjs`：文件校验、缺失、损坏、v3 识别、异步加载
 - `test-attachments.mjs`：附件保存、去重、缺失、路径穿越、状态标注
 - `test-load.mjs`：`loadStart/loadStatus` 进度、并发拒绝、缺失文件、v4 拒绝
-- `test-import.mjs`：mock DSH 服务跑完整导入，验证图片块与状态说明
-- `test-summary.mjs` / `test-summary-call.mjs`：摘要提示词与模型调用
+- `test-import.mjs`：mock DSH 服务跑完整导入，验证图片块、状态说明、不保留/完整存档/摘要的记忆文件
+- `test-memory.mjs`：统一记忆目录、manifest、分片、thinking、顶部文案
+- `test-summary.mjs` / `test-summary-call.mjs`：摘要提示词、思考强度与模型调用
 
 测试命令见上；如需 CI，可自行接入。
 

@@ -14,9 +14,9 @@ All processing is local. The plugin does not request an account password, cookie
 - **Attachments**: v3 images become image blocks in the imported session, other files become file blocks; missing or oversized attachments are skipped with a note. Legacy and browser exports only keep attachment names.
 - **Status notes**: replies marked `INCOMPLETE`, `TIMEOUT` or `CONTEXT_LENGTH_EXCEEDED` get a visible note; `CONTENT_FILTER` keeps the export's fallback text.
 - **Version selection**: the picker starts on the current version marker or the latest leaf; switching a version follows the longest continuation; a custom leaf can be reopened.
-- **Compression**: keep the last N turns; discard the rest or summarize it with a configured DeepSeek model; choose summary length, a cost cap, and a summary prompt preset you can edit, save as “My preset”, or delete if it is not built in. Summaries run with reasoning disabled by default; only the developer config can change a model's reasoning effort.
-- **Cost estimate**: one reference estimate before import, actual usage after, peak/off-peak pricing, cache hit/miss, and local calibration that converges over time. Reasoning tokens of an enabled summary thinking mode are not part of the estimate.
-- **Sessions**: writes native DSH session logs, keeps the original title, numbers repeated imports (`Title (2)`), records summary/usage markdown, and supports stop/continue/keep-partial.
+- **Compression**: keep the last N turns and choose what happens to older ones: **drop**, **summarize** with a configured DeepSeek model, or **full archive** to `deepseek-memory/memory.md` without a model call. Summaries support a per-import reasoning effort (`Off / Low / High / Max`, default from the plugin config `Off`), summary length, a cost cap, and an editable prompt preset. Full archive can optionally save AI thinking to `thinking.md`.
+- **Cost estimate**: one reference estimate before import, actual usage after, peak/off-peak pricing, cache hit/miss, and local calibration that converges over time. Drop and full-archive imports make no model calls. Reasoning tokens of a non-`Off` summary are not part of the estimate; the panel says so explicitly.
+- **Sessions and memory files**: writes native DSH session logs, keeps the original title, numbers repeated imports (`Title (2)`), and for summary/full-archive imports writes the unified `deepseek-memory/` directory (`manifest.json`, `memory.md`, optional `thinking.md`, split parts for large files). Drop imports write no memory files. Supports stop/continue/keep-partial.
 - **UI**: sidebar Import page, multi-file picker, search, recent files, auto-restore of the last selection, a dedicated parse progress bar with a percentage, format labels (`official v3` / `official (no version)` / `browser record` / `mixed`), and short errors with details.
 - **Safety**: no direct network access, no credentials, no telemetry; selected files are read locally; attachments are written to the local DSH attachment store; a network audit script is included.
 
@@ -68,6 +68,7 @@ npm run build:client
 - [Summary prompt](docs/summary-prompt.md)
 - [Version picker](docs/version-picker.md)
 - [Format support](docs/formats.md)
+- [Memory files](docs/memory.md)
 - [Official export format comparison (Chinese)](docs/官方导出格式对照.md)
 - [Security](docs/security.md)
 - [Troubleshooting](docs/troubleshooting.md)

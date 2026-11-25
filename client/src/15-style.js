@@ -143,4 +143,9 @@
 .dsdi-detail-version{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;border:1px solid #e8ebf0;border-radius:8px;background:#fff;padding:6px 8px;margin-bottom:6px;cursor:pointer}
 .dsdi-detail-version.selected{border-color:#4d6bfe;background:#eef2ff}
 .dsdi-detail-preview{font-size:11px;color:#8a8f99;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dsdi-parse{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.dsdi-parselabel{font-size:12px;color:#8a8f99;white-space:nowrap}
+.dsdi-parsebar{flex:1 1 auto;height:6px;border-radius:3px;background:#e4e7ec;overflow:hidden;min-width:80px}
+.dsdi-parsefill{height:100%;background:#4d6bfe;border-radius:3px;transition:width .2s}
+.dsdi-parsepercent{font-size:12px;color:#8a8f99;min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
 `

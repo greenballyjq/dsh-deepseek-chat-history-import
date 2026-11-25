@@ -342,20 +342,20 @@
           : (typeof target === 'string' && target ? [target] : (loadedPath ? [loadedPath] : []))
         if (list.length === 0) { setError('请先选择文件'); return }
         setLoading(true)
-        setParseProgress({ done: 0, total: 0, elapsedMs: 0 })
+        setParseProgress({ done: 0, total: 0 })
         clearError()
         setNotice('')
         try {
           const started = await call('loadStart', list.length === 1 ? { path: list[0] } : { paths: list })
           let job = started.job || null
           if (!job) throw new Error('读取没有开始')
-          setParseProgress({ done: Number(job.done) || 0, total: Number(job.total) || 0, elapsedMs: 0 })
+          setParseProgress({ done: Number(job.done) || 0, total: Number(job.total) || 0 })
           while (job.status === 'running') {
             await new Promise((resolve) => setTimeout(resolve, 250))
             const status = await call('loadStatus', {})
             job = status.job
             if (!job) throw new Error('读取状态丢失')
-            setParseProgress({ done: Number(job.done) || 0, total: Number(job.total) || 0, elapsedMs: Number(job.elapsedMs) || 0 })
+            setParseProgress({ done: Number(job.done) || 0, total: Number(job.total) || 0 })
           }
           if (job.status !== 'done') throw new Error(job.error || '读取失败')
           applyLoadPayload(job.payload)
@@ -810,12 +810,9 @@
       const formatSummary = formats.length > 1
         ? formats.map((item) => item.label + ' ' + item.count + ' 个').join(' · ')
         : ''
-      const parseText = loading
-        ? (parseProgress && parseProgress.total > 0
-          ? '解析中 ' + parseProgress.done + '/' + parseProgress.total
-            + (parseProgress.elapsedMs > 1000 ? '（' + Math.round(parseProgress.elapsedMs / 1000) + ' 秒）' : '')
-          : '解析中…')
-        : ''
+      const parsePercent = parseProgress && parseProgress.total > 0
+        ? Math.min(100, Math.round((parseProgress.done / parseProgress.total) * 100))
+        : 0
       const duplicateText = duplicateConversations > 0
         ? '有 ' + duplicateConversations + ' 个对话出现在多个来源里：' + sameConversations + ' 个内容相同'
           + (updatedConversations > 0 ? '、' + updatedConversations + ' 个采用较新版本' : '')
@@ -919,8 +916,14 @@
             ),
           ) : null,
         ) : null,
+        loading ? h('div', { className: 'dsdi-parse' },
+          h('span', { className: 'dsdi-parselabel' }, '解析中'),
+          h('div', { className: 'dsdi-parsebar' },
+            h('div', { className: 'dsdi-parsefill', style: { width: parsePercent + '%' } }),
+          ),
+          h('span', { className: 'dsdi-parsepercent' }, parsePercent + '%'),
+        ) : null,
         h('div', { className: 'dsdi-status' },
-          parseText ? h('span', null, parseText) : null,
           formatBadge ? h('span', { className: 'dsdi-badge ok' }, formatBadge) : null,
           formatSummary ? h('span', { className: 'dsdi-result' }, formatSummary) : null,
           sources.length > 1 ? h('span', null, sources.length + ' 个文件') : null,

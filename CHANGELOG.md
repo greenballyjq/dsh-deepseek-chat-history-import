@@ -1,5 +1,11 @@
 # 变更日志
 
+## 2.13.3
+
+- 两个本地 HTTP 入口（API 与上传）在支持 `connection.requestRejection` 的 DSH 上先做浏览器/来源校验；未认证或非 DSH 页面请求返回 401/403
+- 不支持该接口的新版 DSH 继续依赖宿主自身的默认鉴权
+- 更新市场条目，去掉“HTTP 路由没有访问检查”的披露文案
+
 ## 2.13.2
 
 - 项目更名为 **dsh-deepseek-chat-history-import**，明确用于导入 DeepSeek 聊天历史

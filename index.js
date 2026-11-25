@@ -26,6 +26,32 @@ import { pruneUploads } from './lib/store.js'
 export const name = 'deepseek-chat-history-import'
 
 
+/**
+ * Reject requests that did not come from the authenticated DSH browser peer.
+ * DSH 0.2.2 exposes requestRejection on the connection service; newer hosts
+ * handle browser admission before plugin routes and do not expose it.
+ */
+function rejectUntrustedRequest(wctx, req, res) {
+  const connection = typeof wctx.get === 'function' ? wctx.get('connection') : undefined
+  if (!connection) {
+    sendJson(res, 503, { ok: false, message: 'DSH connection service is unavailable' })
+    return true
+  }
+  if (typeof connection.requestRejection !== 'function') return false
+  let rejection
+  try {
+    rejection = connection.requestRejection(req)
+  } catch {
+    // A malformed or unauthenticated request must not reach the importer.
+    rejection = 403
+  }
+  if (rejection === undefined) return false
+  res.writeHead(rejection)
+  res.end(rejection === 401 ? 'unauthorized' : 'forbidden')
+  return true
+}
+
+
 export function apply(ctx) {
   try {
     // Verify the session-log contract before any import can write a log this
@@ -40,7 +66,7 @@ export function apply(ctx) {
         file: '',
       })
     }
-    ctx.inject(['webServer'], (wctx) => {
+    ctx.inject(['webServer', 'connection'], (wctx) => {
       try {
         fs.mkdirSync(resolveImportRoot(), { recursive: true })
       } catch {
@@ -56,12 +82,16 @@ export function apply(ctx) {
           const dispose = wctx.webServer.register({
             kind: 'prefix',
             path: ROUTE,
-            handler: (req, res) => handleRoute(lazyServices(wctx), req, res),
+            handler: (req, res) => {
+              if (rejectUntrustedRequest(wctx, req, res)) return
+              return handleRoute(lazyServices(wctx), req, res)
+            },
           })
           const disposeUpload = wctx.webServer.register({
             kind: 'prefix',
             path: UPLOAD_ROUTE,
             handler: (req, res) => {
+              if (rejectUntrustedRequest(wctx, req, res)) return
               try {
                 handleUpload(req, res)
               } catch (error) {

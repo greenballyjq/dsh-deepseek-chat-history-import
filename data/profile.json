@@ -56,16 +56,15 @@
       "summary": {
         "promptTokens": 300,
         "outputRatio": 0.04,
+        "chunkChars": 60000,
         "maxTokensPerChar": 3,
         "maxTokensFloor": 2048,
         "reasoningEffort": "off",
-        "levels": {
-          "brief": 800,
-          "standard": 1500,
-          "detailed": 2500
-        },
-        "chunkChars": 60000,
-        "maxCharsFactor": 2
+        "levels": [
+          { "id": "brief", "name": "简短", "chars": 800 },
+          { "id": "standard", "name": "标准", "chars": 1500 },
+          { "id": "detailed", "name": "详细", "chars": 2500 }
+        ]
       },
       "estimation": {
         "messageOverhead": 4,
@@ -134,16 +133,15 @@
       "summary": {
         "promptTokens": 300,
         "outputRatio": 0.04,
+        "chunkChars": 60000,
         "maxTokensPerChar": 3,
         "maxTokensFloor": 2048,
         "reasoningEffort": "off",
-        "levels": {
-          "brief": 800,
-          "standard": 1500,
-          "detailed": 2500
-        },
-        "chunkChars": 60000,
-        "maxCharsFactor": 2
+        "levels": [
+          { "id": "brief", "name": "简短", "chars": 800 },
+          { "id": "standard", "name": "标准", "chars": 1500 },
+          { "id": "detailed", "name": "详细", "chars": 2500 }
+        ]
       },
       "estimation": {
         "messageOverhead": 4,

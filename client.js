@@ -7,9 +7,8 @@ window.__ModuleLoader__.load({
     const API = '/deepseek-chat-history-import/api'
     const ROW_HEIGHT = 46
     const RECENT_CHIPS = 4
-    const DEFAULT_LEVELS = { brief: 800, standard: 1500, detailed: 2500 }
-    const DEFAULT_LIMITS = { retainTurns: [1, 5000], maxCostCny: [0, 20] }
-    const SUMMARY_LEVELS = { brief: 800, standard: 1500, detailed: 2500 }
+    const DEFAULT_SUMMARY_CHARS = 1500
+    const DEFAULT_LIMITS = { retainTurns: [1, 5000], maxCostCny: [0, 20], summaryChars: [500, 4000] }
     /** Client workspace service; set in apply so a finished import can update the sidebar. */
     let clientWorkspaces = null
     /** Client session service; a finished import refreshes the list so the session row appears. */
@@ -234,6 +233,32 @@ window.__ModuleLoader__.load({
 
     const TRANSCRIPT_ROW_HEIGHT = 132
     const TRANSCRIPT_SIDEBAR_ROW = 62
+
+    /** Deep copy for the developer-config draft. */
+    function cloneJson(value) {
+      return value == null ? value : JSON.parse(JSON.stringify(value))
+    }
+
+    function pathGet(source, pathText) {
+      let cursor = source
+      for (const part of String(pathText).split('.')) {
+        if (cursor == null) return undefined
+        cursor = cursor[part]
+      }
+      return cursor
+    }
+
+    function pathSet(source, pathText, value) {
+      const parts = String(pathText).split('.')
+      const root = { ...(source || {}) }
+      let cursor = root
+      for (let index = 0; index < parts.length - 1; index += 1) {
+        cursor[parts[index]] = { ...(cursor[parts[index]] || {}) }
+        cursor = cursor[parts[index]]
+      }
+      cursor[parts[parts.length - 1]] = value
+      return root
+    }
 
     function TranscriptPicker({ path, conversationId, title, onClose, onConfirm, initialLeafId }) {
       const [messages, setMessages] = React.useState([])
@@ -644,6 +669,38 @@ window.__ModuleLoader__.load({
     }
 
     /** One short line describing the import settings; used by the estimate row. */
+    const DEV_FIELDS = [
+      { path: 'tokens.cjkPerChar', label: '汉字 token/字', step: 0.05 },
+      { path: 'tokens.latinPerChar', label: '拉丁 token/字', step: 0.05 },
+      { path: 'context.window', label: '上下文窗口', step: 1024 },
+      { path: 'context.minRetainTurns', label: '最少保留轮数', step: 1 },
+      { path: 'context.systemOverhead', label: '固定开销 tokens', step: 1000 },
+      { path: 'context.budgetRatio', label: '预算占比', step: 0.05 },
+      { path: 'pricing.peak.cacheHit', label: '高峰·缓存命中', step: 0.01 },
+      { path: 'pricing.peak.cacheMiss', label: '高峰·未命中', step: 0.5 },
+      { path: 'pricing.peak.output', label: '高峰·输出', step: 0.5 },
+      { path: 'pricing.offPeak.cacheHit', label: '低峰·缓存命中', step: 0.01 },
+      { path: 'pricing.offPeak.cacheMiss', label: '低峰·未命中', step: 0.5 },
+      { path: 'pricing.offPeak.output', label: '低峰·输出', step: 0.5 },
+      { path: 'summary.promptTokens', label: '提示词 tokens', step: 50 },
+      { path: 'summary.outputRatio', label: '输出占比', step: 0.01 },
+      { path: 'summary.chunkChars', label: '分块字符', step: 1000 },
+      { path: 'summary.maxTokensPerChar', label: '输出 token/字', step: 0.5 },
+      { path: 'summary.maxTokensFloor', label: '输出 token 下限', step: 256 },
+      { path: 'summary.reasoningEffort', label: '思考强度', text: true },
+      { path: 'estimation.messageOverhead', label: '估算·消息开销', step: 1 },
+      { path: 'estimation.tailSafety', label: '估算·尾部余量', step: 50 },
+      { path: 'estimation.summaryFactor', label: '估算·摘要系数', step: 0.1 },
+      { path: 'estimation.minOutputChars', label: '估算·最少输出字', step: 10 },
+      { path: 'estimation.outputTokensPerSegment', label: '估算·每段输出', step: 50 },
+      { path: 'estimation.cacheHitRatio', label: '估算·缓存命中', step: 0.05 },
+      { path: 'estimation.ewmaAlpha', label: '估算·EWMA 系数', step: 0.05 },
+      { path: 'estimation.coldCacheHitRatio', label: '估算·冷启动命中', step: 0.05 },
+      { path: 'estimation.warmCacheHitRatio', label: '估算·重复命中', step: 0.05 },
+      { path: 'estimation.inputScale', label: '估算·输入系数', step: 0.05 },
+      { path: 'estimation.outputScale', label: '估算·输出系数', step: 0.05 },
+    ]
+
     function ImportPanel() {
       const [filePath, setFilePath] = React.useState('')
       const [fileName, setFileName] = React.useState('')
@@ -668,6 +725,11 @@ window.__ModuleLoader__.load({
       const [settingsDraft, setSettingsDraft] = React.useState(null)
       const [settingsError, setSettingsError] = React.useState('')
       const [settingsSaving, setSettingsSaving] = React.useState(false)
+      const [devOpen, setDevOpen] = React.useState(false)
+      const [devModelId, setDevModelId] = React.useState('')
+      const [devDraft, setDevDraft] = React.useState(null)
+      const [devSaving, setDevSaving] = React.useState(false)
+      const [devError, setDevError] = React.useState('')
       const [contractChecking, setContractChecking] = React.useState(false)
       const [contractOpen, setContractOpen] = React.useState(false)
       const [profileOpen, setProfileOpen] = React.useState(false)
@@ -676,7 +738,7 @@ window.__ModuleLoader__.load({
       const listRef = React.useRef(null)
       const [mode, setMode] = React.useState('placeholder')
       const [retainTurns, setRetainTurns] = React.useState(100)
-      const [summaryLevel, setSummaryLevel] = React.useState('standard')
+      const [summaryChars, setSummaryChars] = React.useState(DEFAULT_SUMMARY_CHARS)
       const [summaryPromptPreset, setSummaryPromptPreset] = React.useState('neutral')
       const [summaryPromptText, setSummaryPromptText] = React.useState('')
       const [summaryPromptBase, setSummaryPromptBase] = React.useState('neutral')
@@ -755,7 +817,14 @@ window.__ModuleLoader__.load({
           const settings = payload.settings || {}
           const defaults = settings.defaults || {}
           if (Number.isFinite(defaults.retainTurns)) setRetainTurns(Math.min(5000, Math.max(1, Math.round(defaults.retainTurns))))
-          if (defaults.summaryLevel === 'brief' || defaults.summaryLevel === 'standard' || defaults.summaryLevel === 'detailed') setSummaryLevel(defaults.summaryLevel)
+          const levelList = Array.isArray(payload.summaryLevels) ? payload.summaryLevels : []
+          const standardLevel = levelList.find((level) => level && level.id === 'standard') || levelList[0]
+          const startChars = Number(defaults.summaryChars) > 0
+            ? Number(defaults.summaryChars)
+            : (Number(payload.defaultSummaryChars) > 0
+              ? Number(payload.defaultSummaryChars)
+              : (standardLevel ? Number(standardLevel.chars) : DEFAULT_SUMMARY_CHARS))
+          if (startChars > 0) setSummaryChars(startChars)
           if (Number.isFinite(defaults.maxCostCny)) setMaxCost(Math.min(20, Math.max(0, defaults.maxCostCny)))
           const presets = Array.isArray(payload.summaryPresets) ? payload.summaryPresets : []
           const defaultId = payload.defaultSummaryPrompt || 'neutral'
@@ -770,9 +839,10 @@ window.__ModuleLoader__.load({
         return () => { cancelled = true }
       }, [])
 
-      const levels = (profileInfo && profileInfo.summaryLevels) || DEFAULT_LEVELS
+      const levels = profileInfo && Array.isArray(profileInfo.summaryLevels) && profileInfo.summaryLevels.length > 0
+        ? profileInfo.summaryLevels
+        : [{ id: 'standard', name: '标准', chars: DEFAULT_SUMMARY_CHARS }]
       const limits = (profileInfo && profileInfo.limits) || DEFAULT_LIMITS
-      const summaryChars = levels[summaryLevel] || levels.standard || 1500
       const summaryPresets = (profileInfo && Array.isArray(profileInfo.summaryPresets)) ? profileInfo.summaryPresets : []
       const summaryPromptLimit = Number(profileInfo && profileInfo.maxSummaryPromptChars) > 0 ? Number(profileInfo.maxSummaryPromptChars) : 4000
       const activeSummaryPreset = summaryPresets.find((preset) => preset && preset.id === summaryPromptPreset) || null
@@ -784,10 +854,10 @@ window.__ModuleLoader__.load({
       const compressPayload = () => ({
         mode,
         retainTurns,
-        summaryChars,
+        summaryChars: Number(summaryChars),
         maxCostCny: maxCost,
         ...(modelChoice ? { model: modelChoice } : {}),
-        ...(mode === 'summary' ? { summaryPrompt: { preset: summaryPromptPreset, text: summaryPromptText } } : {}),
+        ...(mode === 'summary' ? { summaryPrompt: { text: summaryPromptText, name: activeSummaryPreset ? activeSummaryPreset.name : '自定义' } } : {}),
       })
       const pathPayload = () => ({ pathRule, leafId })
 
@@ -905,7 +975,7 @@ window.__ModuleLoader__.load({
           }
         }, 400)
         return () => { cancelled = true; clearTimeout(timer); setEstimating(false) }
-      }, [mode, selectedId, loadedPath, filePath, retainTurns, summaryLevel, maxCost, pathRule, leafId, modelChoice, summaryPromptPreset, summaryPromptText, promptError])
+      }, [mode, selectedId, loadedPath, filePath, retainTurns, summaryChars, maxCost, pathRule, leafId, modelChoice, summaryPromptPreset, summaryPromptText, promptError])
 
       const onLoad = async (target) => {
         const list = Array.isArray(target)
@@ -1190,11 +1260,53 @@ window.__ModuleLoader__.load({
           importRoot: (profileInfo && profileInfo.importRoot) || '',
           model: settings.model || (profileInfo && profileInfo.profile ? profileInfo.profile.defaultModel : '') || '',
           retainTurns: Number.isFinite(defaults.retainTurns) ? defaults.retainTurns : retainTurns,
-          summaryLevel: defaults.summaryLevel || summaryLevel,
+          summaryChars: Number.isFinite(Number(defaults.summaryChars)) ? Number(defaults.summaryChars) : summaryChars,
           maxCostCny: Number.isFinite(defaults.maxCostCny) ? defaults.maxCostCny : maxCost,
         })
         setSettingsError('')
+        const devs = (profileInfo && profileInfo.devModels) || {}
+        const devModel = settings.model && devs[settings.model] ? settings.model : (Object.keys(devs)[0] || '')
+        setDevModelId(devModel)
+        setDevDraft(devs[devModel] ? cloneJson(devs[devModel]) : null)
+        setDevError('')
+        setDevOpen(false)
         setSettingsOpen(true)
+      }
+
+      const pickDevModel = (id) => {
+        const devs = (profileInfo && profileInfo.devModels) || {}
+        setDevModelId(id)
+        setDevError('')
+        setDevDraft(devs[id] ? cloneJson(devs[id]) : null)
+      }
+
+      const devPatchOf = (draft) => {
+        let patch = {}
+        for (const field of DEV_FIELDS) {
+          const value = pathGet(draft, field.path)
+          if (value !== undefined) patch = pathSet(patch, field.path, value)
+        }
+        if (draft.summary && Array.isArray(draft.summary.levels)) {
+          patch = pathSet(patch, 'summary.levels', draft.summary.levels)
+        }
+        return patch
+      }
+
+      const saveDevConfig = async () => {
+        if (!devDraft || !devModelId) return
+        setDevSaving(true)
+        setDevError('')
+        try {
+          const payload = await call('devConfigSave', { model: devModelId, config: devPatchOf(devDraft) })
+          const fresh = await call('profile')
+          setProfileInfo(fresh)
+          const devs = (fresh && fresh.devModels) || {}
+          setDevDraft(devs[devModelId] ? cloneJson(devs[devModelId]) : cloneJson(payload.config))
+        } catch (cause) {
+          setDevError(cause instanceof Error ? cause.message : String(cause))
+        } finally {
+          setDevSaving(false)
+        }
       }
 
       const saveSettings = async () => {
@@ -1208,14 +1320,14 @@ window.__ModuleLoader__.load({
               model: settingsDraft.model || '',
               defaults: {
                 retainTurns: settingsDraft.retainTurns,
-                summaryLevel: settingsDraft.summaryLevel,
+                summaryChars: settingsDraft.summaryChars,
                 maxCostCny: settingsDraft.maxCostCny,
               },
             },
           })
           setProfileInfo((current) => current ? { ...current, settings: payload.settings, importRoot: payload.settings.importRoot || current.importRoot } : current)
           if (Number.isFinite(Number(settingsDraft.retainTurns))) setRetainTurns(Math.min(limits.retainTurns[1], Math.max(limits.retainTurns[0], Math.round(Number(settingsDraft.retainTurns)))))
-          if (['brief', 'standard', 'detailed'].includes(settingsDraft.summaryLevel)) setSummaryLevel(settingsDraft.summaryLevel)
+          if (Number.isFinite(Number(settingsDraft.summaryChars))) setSummaryChars(Math.min(limits.summaryChars[1], Math.max(limits.summaryChars[0], Math.round(Number(settingsDraft.summaryChars)))))
           if (Number.isFinite(Number(settingsDraft.maxCostCny))) setMaxCost(Math.min(limits.maxCostCny[1], Math.max(limits.maxCostCny[0], Number(settingsDraft.maxCostCny))))
           setSettingsOpen(false)
         } catch (cause) {
@@ -1253,9 +1365,9 @@ window.__ModuleLoader__.load({
             : ''
           parts.push('部分摘要（第 ' + result.partial.fromTurn + '–' + result.partial.toTurn + ' 轮，计划 '
             + result.partial.total + ' 段，已生成 ' + result.partial.done + ' 段'
-            + (result.summaryChars ? '，约 ' + result.summaryChars + ' 字' : '') + '）已写入会话' + dropped)
+            + (result.summaryTotalChars ? '，约 ' + result.summaryTotalChars + ' 字' : '') + '）已写入会话' + dropped)
         } else if (result.mode === 'summary' && result.summarySegments > 0) {
-          parts.push('摘要 ' + result.summarySegments + ' 段（约 ' + result.summaryChars + ' 字）已写入会话')
+          parts.push('摘要 ' + result.summarySegments + ' 段（约 ' + result.summaryTotalChars + ' 字）已写入会话')
         } else if (result.compressed) {
           parts.push('较早的 ' + Math.max(0, result.totalTurns - result.retainedTurns) + ' 轮已丢弃')
         } else {
@@ -1538,12 +1650,10 @@ window.__ModuleLoader__.load({
               h('span', null, '摘要'),
               h('select', {
                 className: 'dsdi-select',
-                value: summaryLevel,
-                onChange: (event) => setSummaryLevel(event.target.value),
+                value: String(summaryChars),
+                onChange: (event) => setSummaryChars(Number(event.target.value)),
               },
-                h('option', { value: 'brief' }, '简短'),
-                h('option', { value: 'standard' }, '标准'),
-                h('option', { value: 'detailed' }, '详细'),
+                levels.map((level) => h('option', { key: level.id || level.chars, value: String(level.chars) }, level.name)),
               ),
               h('span', { className: 'dsdi-optlabel' }, '费用上限'),
               h('input', {
@@ -1666,7 +1776,7 @@ window.__ModuleLoader__.load({
             h('div', { className: 'dsdi-dialog-header' },
               h('span', { className: 'dsdi-dialog-title' }, '插件配置'),
             ),
-            h('div', { className: 'dsdi-cancel-body' },
+            h('div', { className: 'dsdi-cancel-body', style: { overflow: 'auto', maxHeight: '70vh' } },
               h('div', { className: 'dsdi-dialognote' }, '这些值用于新导入；已导入的会话不受影响。'),
               h('div', { className: 'dsdi-field' },
                 h('span', { className: 'dsdi-optlabel' }, '导入位置'),
@@ -1710,12 +1820,10 @@ window.__ModuleLoader__.load({
                 h('span', null, '默认摘要'),
                 h('select', {
                   className: 'dsdi-select',
-                  value: settingsDraft.summaryLevel,
-                  onChange: (event) => setSettingsDraft({ ...settingsDraft, summaryLevel: event.target.value }),
+                  value: String(settingsDraft.summaryChars),
+                  onChange: (event) => setSettingsDraft({ ...settingsDraft, summaryChars: Number(event.target.value) }),
                 },
-                  h('option', { value: 'brief' }, '简短'),
-                  h('option', { value: 'standard' }, '标准'),
-                  h('option', { value: 'detailed' }, '详细'),
+                  levels.map((level) => h('option', { key: level.id || level.chars, value: String(level.chars) }, level.name)),
                 ),
               ),
               h('div', { className: 'dsdi-field' },
@@ -1730,6 +1838,65 @@ window.__ModuleLoader__.load({
                   onChange: (event) => setSettingsDraft({ ...settingsDraft, maxCostCny: Number(event.target.value) }),
                 }),
                 h('span', null, '元'),
+              ),
+              h('div', { className: 'dsdi-section' },
+                h('div', { className: 'dsdi-sectionhead' },
+                  h('span', { className: 'dsdi-sectiontitle' }, '开发者配置'),
+                  h('button', { className: 'dsdi-link-btn', onClick: () => setDevOpen(!devOpen) }, devOpen ? '收起' : '展开'),
+                ),
+                devOpen ? h('div', { className: 'dsdi-sectionbody' },
+                  h('div', { className: 'dsdi-field' },
+                    h('span', null, '模型'),
+                    h('select', {
+                      className: 'dsdi-select',
+                      value: devModelId,
+                      onChange: (event) => pickDevModel(event.target.value),
+                    },
+                      Object.keys((profileInfo && profileInfo.devModels) || {}).map((id) => h('option', { key: id, value: id }, id)),
+                    ),
+                  ),
+                  devDraft ? h('div', { style: { display: 'grid', gridTemplateColumns: '1fr', gap: '4px', maxHeight: '300px', overflow: 'auto', paddingRight: '4px' } },
+                    DEV_FIELDS.map((field) => h('div', { className: 'dsdi-field', key: field.path },
+                      h('span', null, field.label),
+                      h('input', {
+                        className: 'dsdi-num',
+                        type: field.text ? 'text' : 'number',
+                        ...(field.text ? {} : { step: field.step }),
+                        value: pathGet(devDraft, field.path) == null ? '' : pathGet(devDraft, field.path),
+                        onChange: (event) => setDevDraft(pathSet(devDraft, field.path, field.text ? event.target.value : Number(event.target.value))),
+                      }),
+                    )),
+                    ((devDraft.summary && Array.isArray(devDraft.summary.levels)) ? devDraft.summary.levels : []).map((level, index) => h('div', { className: 'dsdi-field', key: 'level-' + index },
+                      h('span', null, '摘要档位·' + (level.name || level.id || String(index + 1))),
+                      h('input', {
+                        className: 'dsdi-num',
+                        type: 'number',
+                        min: 1,
+                        step: 100,
+                        value: level.chars,
+                        onChange: (event) => setDevDraft({
+                          ...devDraft,
+                          summary: {
+                            ...devDraft.summary,
+                            levels: devDraft.summary.levels.map((item, itemIndex) => (
+                              itemIndex === index ? { ...item, chars: Number(event.target.value) } : item
+                            )),
+                          },
+                        }),
+                      }),
+                      h('span', null, '字'),
+                    )),
+                  ) : h('div', { className: 'dsdi-desc' }, '这个模型没有可编辑的配置'),
+                  devError ? h('div', { className: 'dsdi-err' }, devError) : null,
+                  h('div', { className: 'dsdi-field' },
+                    h('button', {
+                      className: 'dsdi-btn primary',
+                      disabled: devSaving || !devDraft,
+                      onClick: saveDevConfig,
+                    }, devSaving ? '保存中…' : '保存开发者配置'),
+                  ),
+                  h('div', { className: 'dsdi-desc' }, '写入本机 profile.json：' + ((profileInfo && profileInfo.devConfigPath) || '')),
+                ) : null,
               ),
               settingsError ? h('div', { className: 'dsdi-err' }, settingsError) : null,
             ),

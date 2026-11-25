@@ -70,3 +70,29 @@
 
     const TRANSCRIPT_ROW_HEIGHT = 132
     const TRANSCRIPT_SIDEBAR_ROW = 62
+
+    /** Deep copy for the developer-config draft. */
+    function cloneJson(value) {
+      return value == null ? value : JSON.parse(JSON.stringify(value))
+    }
+
+    function pathGet(source, pathText) {
+      let cursor = source
+      for (const part of String(pathText).split('.')) {
+        if (cursor == null) return undefined
+        cursor = cursor[part]
+      }
+      return cursor
+    }
+
+    function pathSet(source, pathText, value) {
+      const parts = String(pathText).split('.')
+      const root = { ...(source || {}) }
+      let cursor = root
+      for (let index = 0; index < parts.length - 1; index += 1) {
+        cursor[parts[index]] = { ...(cursor[parts[index]] || {}) }
+        cursor = cursor[parts[index]]
+      }
+      cursor[parts[parts.length - 1]] = value
+      return root
+    }

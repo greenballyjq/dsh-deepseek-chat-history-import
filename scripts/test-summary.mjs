@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict'
 import {
-  DEFAULT_SUMMARY_PROMPT_PRESET,
   MAX_SUMMARY_PROMPT_CHARS,
   SUMMARY_PROMPT_PRESETS,
-  buildSummaryPrompt,
-  normalizeSummaryPrompt,
+  buildSystemPrompt,
+  normalizePrompt,
   summaryPromptFingerprint,
   truncateSummaryText,
 } from '../lib/summary-prompt.js'
@@ -22,64 +21,53 @@ function test(name, fn) {
   }
 }
 
-test('defaults to the neutral preset', () => {
-  const prompt = normalizeSummaryPrompt(undefined)
-  assert.equal(prompt.preset, DEFAULT_SUMMARY_PROMPT_PRESET)
-  assert.equal(prompt.label, '中性')
-  assert.ok(prompt.text.length > 20)
-})
-
-test('known presets use the host text and ignore edited text', () => {
-  const prompt = normalizeSummaryPrompt({ preset: 'technical', text: 'this is ignored' })
-  assert.equal(prompt.preset, 'technical')
-  assert.equal(prompt.label, '技术 / 工作')
-  assert.notEqual(prompt.text, 'this is ignored')
-  assert.ok(prompt.text.includes('代码'))
-})
-
-test('custom text is preserved and labelled custom', () => {
-  const prompt = normalizeSummaryPrompt({ preset: 'custom', text: '  保留所有关键决定。  ' })
-  assert.equal(prompt.preset, 'custom')
-  assert.equal(prompt.label, '自定义')
+test('request text is preserved and named', () => {
+  const prompt = normalizePrompt({ text: '  保留所有关键决定。  ', name: '技术 / 工作' })
   assert.equal(prompt.text, '保留所有关键决定。')
+  assert.equal(prompt.name, '技术 / 工作')
+  assert.equal(prompt.fingerprint, summaryPromptFingerprint('保留所有关键决定。'))
 })
 
-test('an unknown preset with text falls back to custom', () => {
-  const prompt = normalizeSummaryPrompt({ preset: 'unknown', text: '自定义内容' })
-  assert.equal(prompt.preset, 'custom')
-  assert.equal(prompt.text, '自定义内容')
+test('a missing name falls back to 自定义', () => {
+  const prompt = normalizePrompt({ text: '保留要点' })
+  assert.equal(prompt.name, '自定义')
 })
 
-test('empty custom text is rejected', () => {
-  assert.throws(() => normalizeSummaryPrompt({ preset: 'custom', text: '   ' }), /不能为空/)
+test('empty prompt text is rejected', () => {
+  assert.throws(() => normalizePrompt({ text: '   ' }), /不能为空/)
 })
 
-test('overlong custom text is rejected', () => {
+test('a missing prompt falls back to the neutral preset', () => {
+  const prompt = normalizePrompt(undefined)
+  assert.ok(prompt.text.length > 20)
+  assert.equal(prompt.name, '中性')
+})
+
+test('overlong prompt text is rejected', () => {
   assert.throws(
-    () => normalizeSummaryPrompt({ preset: 'custom', text: 'x'.repeat(MAX_SUMMARY_PROMPT_CHARS + 1) }),
+    () => normalizePrompt({ text: 'x'.repeat(MAX_SUMMARY_PROMPT_CHARS + 1) }),
     /不能超过/,
   )
 })
 
-test('the fixed guard is appended and carries the limit', () => {
-  const system = buildSummaryPrompt({ preset: 'custom', text: '只保留要点' }, 1500)
-  assert.ok(system.startsWith('只保留要点'))
-  assert.ok(system.includes('系统约束'))
+test('the host framing carries the user text and the limit', () => {
+  const system = buildSystemPrompt('只保留要点', 1500)
+  assert.ok(system.includes('只保留要点'))
   assert.ok(system.includes('不超过 1500 字'))
   assert.ok(system.includes('纯文本'))
+  assert.ok(system.includes('输出要求'))
 })
 
-test('a legacy placeholder is replaced and leaves no variable', () => {
-  const system = buildSummaryPrompt({ preset: 'custom', text: '写 {{limit}} 字以内' }, 800)
-  assert.ok(system.includes('写 800 字以内'))
-  assert.ok(!system.includes('{{limit}}'))
+test('a literal {{limit}} is not treated as a variable', () => {
+  const system = buildSystemPrompt('写 {{limit}} 字以内', 800)
+  assert.ok(system.includes('写 {{limit}} 字以内'))
   assert.ok(system.includes('不超过 800 字'))
 })
 
-test('every preset has no placeholder and no fixed-guard leakage', () => {
+test('presets carry no host framing text', () => {
   for (const preset of SUMMARY_PROMPT_PRESETS) {
     assert.ok(!preset.text.includes('{{limit}}'))
-    assert.ok(!preset.text.includes('系统约束'))
+    assert.ok(!preset.text.includes('输出要求'))
   }
 })
 
@@ -94,26 +82,27 @@ test('post-generation truncation is strict', () => {
   assert.equal(truncateSummaryText('abc', 10), 'abc')
 })
 
-test('compress options carry the normalized prompt', () => {
+test('compress options carry the validated prompt and a clamped length', () => {
   const options = normalizeCompressOptions({
     mode: 'summary',
-    summaryPrompt: { preset: 'narrative', text: 'ignored' },
+    summaryChars: 99_999,
+    summaryPrompt: { text: '保留剧情与人物关系。', name: '叙事 / 角色扮演' },
   })
-  assert.equal(options.summaryPrompt.preset, 'narrative')
-  assert.equal(options.summaryPrompt.label, '叙事 / 角色扮演')
-  assert.ok(options.summaryPrompt.text.includes('剧情'))
+  assert.equal(options.summaryPrompt.name, '叙事 / 角色扮演')
+  assert.equal(options.summaryPrompt.text, '保留剧情与人物关系。')
+  assert.ok(options.summaryChars <= 4_000)
   assert.throws(
-    () => normalizeCompressOptions({ mode: 'summary', summaryPrompt: { preset: 'custom', text: '' } }),
+    () => normalizeCompressOptions({ mode: 'summary', summaryPrompt: { text: '' } }),
     /不能为空/,
   )
 })
 
-test('estimate input tokens include the custom prompt and guard', () => {
+test('estimate input tokens include the prompt text', () => {
   const turns = [{ user: 'u'.repeat(1200), text: 'a'.repeat(1200) }]
   const plan = { shadowedTurns: 1, shadowedChars: 2400, tailTurns: 0 }
   const base = estimateSummaryCost(
     plan,
-    normalizeCompressOptions({ mode: 'summary', summaryPrompt: { preset: 'neutral' } }),
+    normalizeCompressOptions({ mode: 'summary', summaryPrompt: { text: '保留要点。' } }),
     Date.now(),
     turns,
     false,
@@ -124,7 +113,7 @@ test('estimate input tokens include the custom prompt and guard', () => {
     plan,
     normalizeCompressOptions({
       mode: 'summary',
-      summaryPrompt: { preset: 'custom', text: '请保留所有关键决定和约束。'.repeat(80) },
+      summaryPrompt: { text: '请保留所有关键决定和约束。'.repeat(80) },
     }),
     Date.now(),
     turns,
@@ -134,6 +123,12 @@ test('estimate input tokens include the custom prompt and guard', () => {
   )
   assert.ok(custom.inputTokens > base.inputTokens)
   assert.ok(custom.costCny >= base.costCny)
+})
+
+test('placeholder compression needs no prompt', () => {
+  const options = normalizeCompressOptions({ mode: 'placeholder', retainTurns: 10 })
+  assert.equal(options.mode, 'placeholder')
+  assert.ok(options.summaryPrompt.text.length > 20)
 })
 
 console.log(`summary prompt tests: ${passed} passed`)

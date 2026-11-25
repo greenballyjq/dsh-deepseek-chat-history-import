@@ -66,10 +66,30 @@ const longSession = {
     }],
   })),
 }
+const huge = '长'.repeat(40_000)
+const partialSession = {
+  id: 'partial',
+  title: '部分摘要测试',
+  current_message_id: 6,
+  inserted_at: '2026-01-01T00:00:00.000Z',
+  updated_at: '2026-01-01T00:00:06.000Z',
+  messages: Array.from({ length: 6 }, (_, index) => ({
+    id: index + 1,
+    parent_id: index === 0 ? null : index,
+    role: index % 2 === 0 ? 'USER' : 'ASSISTANT',
+    status: 'FINISHED',
+    inserted_at: '2026-01-01T00:00:0' + (index + 1) + '.000Z',
+    fragments: [{
+      type: index % 2 === 0 ? 'REQUEST' : 'RESPONSE',
+      content: (index % 2 === 0 ? '用户长文：' : '助手长文：') + huge,
+    }],
+  })),
+}
 const zipPath = writeZip(dir, 'deepseek_data-2026-01-01', {
   'manifest.json': JSON.stringify({ export_format_version: 3 }),
   'chat_sessions/imp.json': JSON.stringify(session),
   'chat_sessions/long.json': JSON.stringify(longSession),
+  'chat_sessions/partial.json': JSON.stringify(partialSession),
   'chat_sessions/imp_files/f1.png': png,
 })
 
@@ -100,10 +120,12 @@ const workspaceService = {
   async delete() {},
 }
 let summaryCalls = 0
+let failSummaryFrom = Infinity
 const llm = {
   async resolveModelInfo() { return { context: { contextWindow: 1_048_576 } } },
   stream() {
     summaryCalls += 1
+    if (summaryCalls >= failSummaryFrom) throw new Error('模拟摘要中途失败')
     return (async function* generate() {
       yield { type: 'text-delta', text: '摘要测试文本' }
       yield { type: 'usage', usage: { inputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 8 } }
@@ -208,5 +230,35 @@ const summaryCheckpoint = savedEvents.slice(summaryStart).find((event) => event.
   && event.data.content.some((block) => block.type === 'text' && block.text.includes('已概括为摘要')))
 assert.ok(summaryCheckpoint, 'summary checkpoint uses the unified prefix')
 assert.ok(!fs.existsSync(path.join(summaryDir, 'deepseek-import-summary.md')))
+
+failSummaryFrom = summaryCalls + 2
+const partialJob = createImportJob()
+await runImportJob(wctx, partialJob, {
+  path: zipPath,
+  ids: ['partial'],
+  compress: {
+    mode: 'summary',
+    retainTurns: 1,
+    summaryChars: 800,
+    maxCostCny: 1,
+    summaryPrompt: { text: '保留要点。', name: '中性' },
+  },
+  pathRule: 'recent',
+})
+failSummaryFrom = Infinity
+assert.equal(partialJob.status, 'done', partialJob.error)
+assert.equal(partialJob.result.mode, 'summary')
+assert.equal(partialJob.result.partial.done, 1)
+assert.equal(partialJob.result.summaryError.chunkIndex, 2)
+assert.ok(/模拟摘要中途失败/.test(partialJob.result.summaryError.message))
+const partialDir = path.join(importsRoot, '部分摘要测试')
+const partialMemoryRoot = path.join(partialDir, 'deepseek-memory')
+const partialManifest = JSON.parse(fs.readFileSync(path.join(partialMemoryRoot, 'manifest.json'), 'utf8'))
+assert.equal(partialManifest.summary.partial, true)
+assert.equal(partialManifest.summary.failure.chunkIndex, 2)
+assert.ok(fs.readFileSync(path.join(partialMemoryRoot, 'memory.md'), 'utf8').includes('## 摘要段 1'))
+const partialCheckpoint = savedEvents.slice(summaryStart).find((event) => event.type === 'user/message'
+  && event.data.content.some((block) => block.type === 'text' && block.text.includes('生成摘要时停止')))
+assert.ok(partialCheckpoint, 'partial summary is written to the session')
 
 console.log('PASS import writes image blocks, status notes and a durable session')

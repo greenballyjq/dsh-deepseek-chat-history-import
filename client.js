@@ -1421,6 +1421,11 @@ window.__ModuleLoader__.load({
         } else {
           parts.push('保留全部 ' + result.totalTurns + ' 轮')
         }
+        if (result.summaryError) {
+          const error = result.summaryError
+          parts.push('摘要第 ' + error.chunkIndex + ' 段（第 ' + error.fromTurn + '–' + error.toTurn + ' 轮）失败：'
+            + error.message + (error.attempts > 1 ? '（已重试 ' + (error.attempts - 1) + ' 次）' : ''))
+        }
         if (result.compressed) parts.push('保留最近 ' + result.retainedTurns + ' 轮')
         if (result.attachments && (result.attachments.images || result.attachments.files)) {
           const bits = []

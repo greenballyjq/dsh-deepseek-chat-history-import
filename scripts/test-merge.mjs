@@ -417,4 +417,40 @@ check('increasing timestamps keep the newest version', () => {
   assert.equal(officialText(result.byId.get('inc')), 'v30')
 })
 
+check('old and v3 export of the same chat is one conversation, not an update', () => {
+  const updated = '2026-01-02T00:00:00Z'
+  const oldConv = {
+    id: 'same-chat',
+    title: 'Same',
+    inserted_at: '2026-01-01T00:00:00Z',
+    updated_at: updated,
+    mapping: {
+      n1: { id: 'n1', parent: null, children: ['n2'], message: { inserted_at: '2026-01-01T00:00:01Z', fragments: [{ type: 'REQUEST', content: 'hi' }] } },
+      n2: { id: 'n2', parent: 'n1', children: [], message: { inserted_at: '2026-01-01T00:00:02Z', fragments: [{ type: 'RESPONSE', content: 'ok [citation:3]' }] } },
+    },
+  }
+  const v3Conv = {
+    id: 'same-chat',
+    title: 'Same',
+    current_message_id: 2,
+    inserted_at: '2026-01-01T00:00:00.000Z',
+    updated_at: updated,
+    messages: [
+      { id: 1, parent_id: null, role: 'USER', status: 'FINISHED', inserted_at: '2026-01-01T00:00:01.000Z', fragments: [{ type: 'REQUEST', content: 'hi' }] },
+      { id: 2, parent_id: 1, role: 'ASSISTANT', status: 'FINISHED', inserted_at: '2026-01-01T00:00:02.000Z', fragments: [{ type: 'RESPONSE', content: 'ok' }] },
+    ],
+  }
+  const a = file(nextName('same-old') + '.json', [oldConv])
+  const b = file(nextName('same-v3') + '.json', v3Conv)
+  const result = loadSources([a, b])
+  assert.equal(result.byId.size, 1)
+  assert.equal(result.duplicates, 1)
+  assert.equal(result.updated, 0)
+  assert.equal(result.conflicts, 0)
+  assert.equal(result.duplicateConversations, 1)
+  assert.equal(result.sameConversations, 1)
+  assert.equal(result.updatedConversations, 0)
+  assert.equal(result.conflictConversations, 0)
+})
+
 console.log('fixtures:', dir)

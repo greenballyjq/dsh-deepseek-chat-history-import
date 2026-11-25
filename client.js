@@ -751,11 +751,13 @@ window.__ModuleLoader__.load({
       const [estimateError, setEstimateError] = React.useState('')
       const [recent, setRecent] = React.useState([])
       const [sources, setSources] = React.useState([])
-      const [duplicates, setDuplicates] = React.useState(0)
-      const [updated, setUpdated] = React.useState(0)
+      const [duplicateConversations, setDuplicateConversations] = React.useState(0)
+      const [sameConversations, setSameConversations] = React.useState(0)
+      const [updatedConversations, setUpdatedConversations] = React.useState(0)
+      const [conflictConversations, setConflictConversations] = React.useState(0)
       const [oldOnly, setOldOnly] = React.useState(0)
       const [newOnly, setNewOnly] = React.useState(0)
-      const [conflicts, setConflicts] = React.useState(0)
+      const [parseProgress, setParseProgress] = React.useState(null)
       const [skipped, setSkipped] = React.useState([])
       const [skippedOpen, setSkippedOpen] = React.useState(false)
       const [pathRule, setPathRule] = React.useState('recent')
@@ -978,39 +980,56 @@ window.__ModuleLoader__.load({
         return () => { cancelled = true; clearTimeout(timer); setEstimating(false) }
       }, [mode, selectedId, loadedPath, filePath, retainTurns, summaryChars, maxCost, pathRule, leafId, modelChoice, summaryPromptPreset, summaryPromptText, promptError])
 
+      const applyLoadPayload = (payload) => {
+        const nextSources = Array.isArray(payload.sources) ? payload.sources : []
+        setLoadedPath(payload.path)
+        setFilePath(payload.path)
+        setSources(nextSources)
+        setSkipped(Array.isArray(payload.skipped) ? payload.skipped : [])
+        setDuplicateConversations(Number(payload.duplicateConversations) || 0)
+        setSameConversations(Number(payload.sameConversations) || 0)
+        setUpdatedConversations(Number(payload.updatedConversations) || 0)
+        setConflictConversations(Number(payload.conflictConversations) || 0)
+        setOldOnly(Number(payload.oldOnly) || 0)
+        setNewOnly(Number(payload.newOnly) || 0)
+        setSkippedOpen(false)
+        setFileName(nextSources.length > 1
+          ? nextSources.length + ' 个文件'
+          : String((nextSources[0] && nextSources[0].name) || '').replace(/^\d{10,}-/, ''))
+        setFormat(payload.format)
+        setFormats(Array.isArray(payload.formats) ? payload.formats : [])
+        setConversations(Array.isArray(payload.conversations) ? payload.conversations : [])
+        setSelectedId(null)
+        setScrollTop(0)
+        setPathRule('recent')
+        setLeafId('')
+        setPathSummary('')
+        if (Array.isArray(payload.recent)) setRecent(payload.recent)
+      }
+
       const onLoad = async (target) => {
         const list = Array.isArray(target)
           ? target.filter((item) => typeof item === 'string' && item)
           : (typeof target === 'string' && target ? [target] : (loadedPath ? [loadedPath] : []))
         if (list.length === 0) { setError('请先选择文件'); return }
         setLoading(true)
+        setParseProgress({ done: 0, total: 0, elapsedMs: 0 })
         clearError()
         setNotice('')
         try {
-          const payload = await call('load', list.length === 1 ? { path: list[0] } : { paths: list })
-          const nextSources = Array.isArray(payload.sources) ? payload.sources : []
-          setLoadedPath(payload.path)
-          setFilePath(payload.path)
-          setSources(nextSources)
-          setSkipped(Array.isArray(payload.skipped) ? payload.skipped : [])
-          setDuplicates(Number(payload.duplicates) || 0)
-          setUpdated(Number(payload.updated) || 0)
-          setOldOnly(Number(payload.oldOnly) || 0)
-          setNewOnly(Number(payload.newOnly) || 0)
-          setConflicts(Number(payload.conflicts) || 0)
-          setSkippedOpen(false)
-          setFileName(nextSources.length > 1
-            ? nextSources.length + ' 个文件'
-            : String((nextSources[0] && nextSources[0].name) || '').replace(/^\d{10,}-/, ''))
-          setFormat(payload.format)
-          setFormats(Array.isArray(payload.formats) ? payload.formats : [])
-          setConversations(Array.isArray(payload.conversations) ? payload.conversations : [])
-          setSelectedId(null)
-          setScrollTop(0)
-          setPathRule('recent')
-          setLeafId('')
-          setPathSummary('')
-          if (Array.isArray(payload.recent)) setRecent(payload.recent)
+          const started = await call('loadStart', list.length === 1 ? { path: list[0] } : { paths: list })
+          let job = started.job || null
+          if (!job) throw new Error('读取没有开始')
+          setParseProgress({ done: Number(job.done) || 0, total: Number(job.total) || 0, elapsedMs: 0 })
+          while (job.status === 'running') {
+            await new Promise((resolve) => setTimeout(resolve, 250))
+            const status = await call('loadStatus', {})
+            job = status.job
+            if (!job) throw new Error('读取状态丢失')
+            setParseProgress({ done: Number(job.done) || 0, total: Number(job.total) || 0, elapsedMs: Number(job.elapsedMs) || 0 })
+          }
+          if (job.status !== 'done') throw new Error(job.error || '读取失败')
+          applyLoadPayload(job.payload)
         } catch (cause) {
           fail(cause)
           call('recent').then((payload) => {
@@ -1018,6 +1037,7 @@ window.__ModuleLoader__.load({
           }).catch(() => { /* recent is optional */ })
         } finally {
           setLoading(false)
+          setParseProgress(null)
         }
       }
 
@@ -1453,11 +1473,17 @@ window.__ModuleLoader__.load({
       const formatSummary = formats.length > 1
         ? formats.map((item) => item.label + ' ' + item.count + ' 个').join(' · ')
         : ''
-      const duplicateText = duplicates > 0
-        ? '同一对话重复出现 ' + duplicates + ' 次' + (updated === 0
-          ? '（内容相同）'
-          : '（' + (updated === duplicates ? '内容均不同' : '其中 ' + updated + ' 次内容不同')
-            + (conflicts > 0 ? '，' + conflicts + ' 次无法判断哪份更新' : '') + '）')
+      const parseText = loading
+        ? (parseProgress && parseProgress.total > 0
+          ? '解析中 ' + parseProgress.done + '/' + parseProgress.total
+            + (parseProgress.elapsedMs > 1000 ? '（' + Math.round(parseProgress.elapsedMs / 1000) + ' 秒）' : '')
+          : '解析中…')
+        : ''
+      const duplicateText = duplicateConversations > 0
+        ? '有 ' + duplicateConversations + ' 个对话出现在多个来源里：' + sameConversations + ' 个内容相同'
+          + (updatedConversations > 0 ? '、' + updatedConversations + ' 个采用较新版本' : '')
+          + (conflictConversations > 0 ? '、' + conflictConversations + ' 个无法判断哪份更新（保留先读到的）' : '')
+          + (sources.some((source) => !source.exportDate) ? '（有来源没有日期，未按日期比较）' : '')
         : ''
 
       return h('div', { className: 'dsdi-root' },
@@ -1478,7 +1504,7 @@ window.__ModuleLoader__.load({
             onChange: onFileChosen,
           }),
           h('button', { className: 'dsdi-btn', disabled: picking, onClick: onPickFile }, picking
-            ? '读取中 ' + (pickTotal > 0 ? pickDone + '/' + pickTotal : '…')
+            ? '上传中 ' + (pickTotal > 0 ? pickDone + '/' + pickTotal : '…')
             : '选择文件'),
           fileName
             ? h('span', { className: 'dsdi-filename', title: fileName }, fileName)
@@ -1557,11 +1583,11 @@ window.__ModuleLoader__.load({
           ) : null,
         ) : null,
         h('div', { className: 'dsdi-status' },
+          parseText ? h('span', null, parseText) : null,
           formatBadge ? h('span', { className: 'dsdi-badge ok' }, formatBadge) : null,
           formatSummary ? h('span', { className: 'dsdi-result' }, formatSummary) : null,
           sources.length > 1 ? h('span', null, sources.length + ' 个文件') : null,
           conversations.length ? h('span', null, '共 ' + conversations.length + ' 个对话') : null,
-          loading ? h('span', null, '读取中…') : null,
           duplicateText ? h('span', { className: 'dsdi-result' }, duplicateText) : null,
           oldOnly > 0 ? h('span', { className: 'dsdi-result' }, '只出现在较早导出：' + oldOnly + ' 个') : null,
           newOnly > 0 ? h('span', { className: 'dsdi-result' }, '只出现在较新导出：' + newOnly + ' 个') : null,

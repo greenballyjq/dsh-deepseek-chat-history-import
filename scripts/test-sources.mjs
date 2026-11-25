@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { loadSources, validateSourceInputs } from '../lib/load.js'
+import { loadSources, loadSourcesAsync, validateSourceInputs } from '../lib/load.js'
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ds-sources-'))
 
@@ -64,4 +64,12 @@ assert.equal(v3Loaded.kind, 'official')
 assert.equal(v3Loaded.formats.get('v3-session'), 'official/v3')
 assert.deepEqual(v3Loaded.byId.get('v3-session').messages.map((message) => message.role), ['user', 'assistant'])
 
-console.log('PASS validate files, dedupe, tolerate missing and broken files, recognize v3 sessions')
+const progress = []
+const asyncLoaded = await loadSourcesAsync([v3], (step) => progress.push(step))
+assert.equal(asyncLoaded.byId.size, 1)
+assert.equal(asyncLoaded.formats.get('v3-session'), 'official/v3')
+assert.ok(progress.length > 0)
+const lastStep = progress[progress.length - 1]
+assert.equal(lastStep.done, lastStep.total)
+
+console.log('PASS validate files, dedupe, tolerate missing and broken files, recognize v3 sessions, async load')

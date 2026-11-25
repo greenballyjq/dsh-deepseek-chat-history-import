@@ -1396,6 +1396,14 @@ window.__ModuleLoader__.load({
           parts.push('保留全部 ' + result.totalTurns + ' 轮')
         }
         if (result.compressed) parts.push('保留最近 ' + result.retainedTurns + ' 轮')
+        if (result.attachments && (result.attachments.images || result.attachments.files)) {
+          const bits = []
+          if (result.attachments.images) bits.push(result.attachments.images + ' 张图片')
+          if (result.attachments.files) bits.push(result.attachments.files + ' 个文件')
+          parts.push('附件 ' + bits.join('、'))
+        }
+        if (result.attachments && result.attachments.skipped) parts.push(result.attachments.skipped + ' 个附件未导入')
+        if (result.incompleteReplies) parts.push(result.incompleteReplies + ' 条回复未完成')
         if (result.contextPercent != null) parts.push('占用模型上下文约 ' + result.contextPercent + '%')
         if (result.costCny) parts.push('费用约 ¥' + formatCost(result.costCny))
         if (result.fallback && result.reason) parts.push(result.reason)

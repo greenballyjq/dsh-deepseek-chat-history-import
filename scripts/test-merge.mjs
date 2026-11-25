@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import zlib from 'node:zlib'
 import { loadSources } from '../lib/load.js'
+import { writeZip } from './test-fixtures.mjs'
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ds-merge-'))
 let counter = 0
@@ -12,46 +12,7 @@ const file = (name, value) => {
   fs.writeFileSync(target, typeof value === 'string' ? value : JSON.stringify(value))
   return target
 }
-const zip = (name, entries) => {
-  const localParts = []
-  const centralParts = []
-  let offset = 0
-  const names = Object.keys(entries)
-  for (const entryName of names) {
-    const content = Buffer.from(entries[entryName], 'utf8')
-    const compressed = zlib.deflateRawSync(content)
-    const nameBuffer = Buffer.from(entryName, 'utf8')
-    const local = Buffer.alloc(30)
-    local.writeUInt32LE(0x04034b50, 0)
-    local.writeUInt16LE(20, 4)
-    local.writeUInt16LE(8, 8)
-    local.writeUInt32LE(compressed.length, 18)
-    local.writeUInt32LE(content.length, 22)
-    local.writeUInt16LE(nameBuffer.length, 26)
-    const central = Buffer.alloc(46)
-    central.writeUInt32LE(0x02014b50, 0)
-    central.writeUInt16LE(20, 4)
-    central.writeUInt16LE(20, 6)
-    central.writeUInt16LE(8, 10)
-    central.writeUInt32LE(compressed.length, 20)
-    central.writeUInt32LE(content.length, 24)
-    central.writeUInt16LE(nameBuffer.length, 28)
-    central.writeUInt32LE(offset, 42)
-    localParts.push(local, nameBuffer, compressed)
-    centralParts.push(central, nameBuffer)
-    offset += 30 + nameBuffer.length + compressed.length
-  }
-  const centralBuffer = Buffer.concat(centralParts)
-  const eocd = Buffer.alloc(22)
-  eocd.writeUInt32LE(0x06054b50, 0)
-  eocd.writeUInt16LE(names.length, 8)
-  eocd.writeUInt16LE(names.length, 10)
-  eocd.writeUInt32LE(centralBuffer.length, 12)
-  eocd.writeUInt32LE(offset, 16)
-  const target = path.join(dir, name + '.zip')
-  fs.writeFileSync(target, Buffer.concat([...localParts, centralBuffer, eocd]))
-  return target
-}
+const zip = (name, entries) => writeZip(dir, name, entries)
 const nextName = (prefix) => prefix + '-' + (++counter) + '-' + Math.random().toString(36).slice(2, 6)
 
 function official(id, title, options = {}) {
@@ -153,8 +114,9 @@ check('october vs november snapshots', () => {
   const nov = zip('deepseek_data-2026-11-01', { 'conversations.json': JSON.stringify([a1, b2, c2, h2, g]) })
   const result = loadSources([oct, nov])
   assert.deepEqual(report('octnov', result), {
-    label: 'octnov', unique: 6, duplicates: 4, updated: 3, conflicts: 0, oldOnly: 1, newOnly: 1, latest: 'deepseek_data-2026-11-01.zip',
+    label: 'octnov', unique: 6, duplicates: 4, updated: 2, conflicts: 0, oldOnly: 1, newOnly: 1, latest: 'deepseek_data-2026-11-01.zip',
   })
+  assert.equal(result.sameConversations, 2)
   assert.equal(officialText(result.byId.get('b')), 'new0')
   assert.equal(officialText(result.byId.get('c')), 'nov0')
   assert.equal(result.meta.get('h').title, 'new name')
@@ -210,7 +172,8 @@ check('duplicate inside one file', () => {
   const result = loadSources([a])
   assert.equal(result.byId.size, 1)
   assert.equal(result.duplicates, 1)
-  assert.equal(result.updated, 1)
+  assert.equal(result.updated, 0)
+  assert.equal(result.sameConversations, 1)
   assert.equal(result.meta.get('inner').title, 'New')
 })
 

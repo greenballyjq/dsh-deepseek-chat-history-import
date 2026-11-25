@@ -125,6 +125,13 @@ test('estimate input tokens include the prompt text', () => {
   assert.ok(custom.costCny >= base.costCny)
 })
 
+test('reasoning effort is validated and carried per import', () => {
+  const high = normalizeCompressOptions({ mode: 'summary', reasoningEffort: 'high', summaryPrompt: { text: '保留要点。' } })
+  assert.equal(high.reasoningEffort, 'high')
+  const invalid = normalizeCompressOptions({ mode: 'summary', reasoningEffort: 'bogus', summaryPrompt: { text: '保留要点。' } })
+  assert.ok(['off', 'low', 'high', 'max'].includes(invalid.reasoningEffort))
+})
+
 test('placeholder compression needs no prompt', () => {
   const options = normalizeCompressOptions({ mode: 'placeholder', retainTurns: 10 })
   assert.equal(options.mode, 'placeholder')

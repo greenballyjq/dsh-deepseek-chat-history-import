@@ -59,7 +59,6 @@
         "chunkChars": 60000,
         "maxTokensPerChar": 3,
         "maxTokensFloor": 2048,
-        "reasoningEffort": "off",
         "levels": [
           { "id": "brief", "name": "简短", "chars": 800 },
           { "id": "standard", "name": "标准", "chars": 1500 },
@@ -136,7 +135,6 @@
         "chunkChars": 60000,
         "maxTokensPerChar": 3,
         "maxTokensFloor": 2048,
-        "reasoningEffort": "off",
         "levels": [
           { "id": "brief", "name": "简短", "chars": 800 },
           { "id": "standard", "name": "标准", "chars": 1500 },

@@ -16,7 +16,6 @@
       { path: 'summary.chunkChars', label: '分块字符', step: 1000 },
       { path: 'summary.maxTokensPerChar', label: '输出 token/字', step: 0.5 },
       { path: 'summary.maxTokensFloor', label: '输出 token 下限', step: 256 },
-      { path: 'summary.reasoningEffort', label: '思考强度', text: true },
       { path: 'estimation.messageOverhead', label: '估算·消息开销', step: 1 },
       { path: 'estimation.tailSafety', label: '估算·尾部余量', step: 50 },
       { path: 'estimation.summaryFactor', label: '估算·摘要系数', step: 0.1 },
@@ -69,6 +68,7 @@
       const [mode, setMode] = React.useState('placeholder')
       const [retainTurns, setRetainTurns] = React.useState(100)
       const [summaryChars, setSummaryChars] = React.useState(DEFAULT_SUMMARY_CHARS)
+      const [reasoningEffort, setReasoningEffort] = React.useState('off')
       const [summaryPromptPreset, setSummaryPromptPreset] = React.useState('neutral')
       const [summaryPromptText, setSummaryPromptText] = React.useState('')
       const [summaryPromptBase, setSummaryPromptBase] = React.useState('neutral')
@@ -157,6 +157,7 @@
               ? Number(payload.defaultSummaryChars)
               : (standardLevel ? Number(standardLevel.chars) : DEFAULT_SUMMARY_CHARS))
           if (startChars > 0) setSummaryChars(startChars)
+          setReasoningEffort(String(defaults.summaryReasoningEffort || 'off'))
           if (Number.isFinite(defaults.maxCostCny)) setMaxCost(Math.min(20, Math.max(0, defaults.maxCostCny)))
           const presets = Array.isArray(payload.summaryPresets) ? payload.summaryPresets : []
           const defaultId = payload.defaultSummaryPrompt || 'neutral'
@@ -175,6 +176,12 @@
         ? profileInfo.summaryLevels
         : [{ id: 'standard', name: '标准', chars: DEFAULT_SUMMARY_CHARS }]
       const limits = (profileInfo && profileInfo.limits) || DEFAULT_LIMITS
+      const reasoningOptions = (profileInfo && Array.isArray(profileInfo.reasoningEfforts)) ? profileInfo.reasoningEfforts : []
+      const defaultReasoningEffort = () => {
+        const settings = (profileInfo && profileInfo.settings) || {}
+        const defaults = settings.defaults || {}
+        return String(defaults.summaryReasoningEffort || 'off')
+      }
       const summaryPresets = (profileInfo && Array.isArray(profileInfo.summaryPresets)) ? profileInfo.summaryPresets : []
       const summaryPromptLimit = Number(profileInfo && profileInfo.maxSummaryPromptChars) > 0 ? Number(profileInfo.maxSummaryPromptChars) : 4000
       const activeSummaryPreset = summaryPresets.find((preset) => preset && preset.id === summaryPromptPreset) || null
@@ -188,10 +195,15 @@
         retainTurns,
         summaryChars: Number(summaryChars),
         maxCostCny: maxCost,
+        reasoningEffort,
         ...(modelChoice ? { model: modelChoice } : {}),
         ...(mode === 'summary' ? { summaryPrompt: { text: summaryPromptText, name: activeSummaryPreset ? activeSummaryPreset.name : '自定义' } } : {}),
       })
       const pathPayload = () => ({ pathRule, leafId })
+
+      React.useEffect(() => {
+        setReasoningEffort(defaultReasoningEffort())
+      }, [selectedId])
 
       const chooseSummaryPreset = (value) => {
         if (value === 'custom') {
@@ -612,6 +624,7 @@
           model: settings.model || (profileInfo && profileInfo.profile ? profileInfo.profile.defaultModel : '') || '',
           retainTurns: Number.isFinite(defaults.retainTurns) ? defaults.retainTurns : retainTurns,
           summaryChars: Number.isFinite(Number(defaults.summaryChars)) ? Number(defaults.summaryChars) : summaryChars,
+          summaryReasoningEffort: defaults.summaryReasoningEffort || 'off',
           maxCostCny: Number.isFinite(defaults.maxCostCny) ? defaults.maxCostCny : maxCost,
         })
         setSettingsError('')
@@ -672,6 +685,7 @@
               defaults: {
                 retainTurns: settingsDraft.retainTurns,
                 summaryChars: settingsDraft.summaryChars,
+                summaryReasoningEffort: settingsDraft.summaryReasoningEffort,
                 maxCostCny: settingsDraft.maxCostCny,
               },
             },
@@ -771,10 +785,11 @@
           if (context && context.adjusted && !estimateItem.forced) parts.push('按当前设置会超出模型上下文，保留轮数已自动减少到 ' + effective + ' 轮')
           if (mode === 'summary' && estimateItem.estimate) {
             const cost = estimateItem.estimate.costCny
+            const costLabel = reasoningEffort === 'off' ? '预计费用' : '预估（不含思考）'
             if (cost > maxCost) {
-              parts.push('预计费用 ¥' + formatCost(cost) + ' 超过费用上限 ¥' + maxCost + '，不会调用模型')
+              parts.push(costLabel + ' ¥' + formatCost(cost) + ' 超过费用上限 ¥' + maxCost + '，不会调用模型')
             } else {
-              parts.push('用 ' + modelName() + ' 生成，预计费用 ¥' + formatCost(cost)
+              parts.push('用 ' + modelName() + ' 生成，' + costLabel + ' ¥' + formatCost(cost)
                 + (estimateItem.estimate.peak ? '（按高峰价计）' : '（按空闲价计）'))
             }
           }
@@ -1049,6 +1064,19 @@
               }),
               h('span', null, '元'),
             ) : null,
+            mode === 'summary' ? h('div', { className: 'dsdi-field' },
+              h('span', null, '思考强度'),
+              h('select', {
+                className: 'dsdi-select',
+                value: reasoningEffort,
+                onChange: (event) => setReasoningEffort(event.target.value),
+              },
+                reasoningOptions.map((effort) => h('option', { key: effort.id, value: effort.id }, effort.label)),
+              ),
+            ) : null,
+            mode === 'summary' && reasoningEffort !== 'off'
+              ? h('div', { className: 'dsdi-warn' }, '思考 token 按输出计费，当前费用预估不包含这部分，实际费用会更高。')
+              : null,
             mode === 'summary' && summaryPresets.length > 0 ? h('div', { className: 'dsdi-promptblock' },
               h('div', { className: 'dsdi-prompthead' },
                 h('span', null, '提示词'),
@@ -1205,6 +1233,16 @@
                   onChange: (event) => setSettingsDraft({ ...settingsDraft, summaryChars: Number(event.target.value) }),
                 },
                   levels.map((level) => h('option', { key: level.id || level.chars, value: String(level.chars) }, level.name)),
+                ),
+              ),
+              h('div', { className: 'dsdi-field' },
+                h('span', null, '默认思考强度'),
+                h('select', {
+                  className: 'dsdi-select',
+                  value: settingsDraft.summaryReasoningEffort,
+                  onChange: (event) => setSettingsDraft({ ...settingsDraft, summaryReasoningEffort: event.target.value }),
+                },
+                  reasoningOptions.map((effort) => h('option', { key: effort.id, value: effort.id }, effort.label)),
                 ),
               ),
               h('div', { className: 'dsdi-field' },

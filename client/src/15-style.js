@@ -45,6 +45,7 @@
 .dsdi-dialognote{font-size:12px;color:var(--dsw-alias-label-secondary,#8a8f99);line-height:1.5;margin-bottom:2px}
 .dsdi-desc{font-size:12px;color:var(--dsw-alias-label-secondary,#8a8f99);line-height:1.5}
 .dsdi-estimate{min-height:34px;font-size:12px;color:var(--dsw-alias-label-secondary,#8a8f99);line-height:1.5}
+.dsdi-warn{font-size:12px;line-height:1.5;color:var(--dsw-alias-state-warning-primary,#92400e);background:var(--dsw-alias-bg-warning,#fffbeb);border:1px solid var(--dsw-alias-border-warning,#f59e0b);border-radius:8px;padding:6px 10px}
 .dsdi-option{display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-size:12px;line-height:1.5}
 .dsdi-option input{margin-top:2px}
 .dsdi-field{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--dsw-alias-label-secondary,#8a8f99);min-height:30px}

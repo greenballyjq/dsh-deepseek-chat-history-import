@@ -14,7 +14,7 @@
         "window": 1048576,
         "minRetainTurns": 4,
         "systemOverhead": 40000,
-        "budgetRatio": 0.72
+        "budgetRatio": 0.6
       },
       "pricing": {
         "timeZone": "Asia/Shanghai",
@@ -90,7 +90,7 @@
         "window": 1048576,
         "minRetainTurns": 4,
         "systemOverhead": 40000,
-        "budgetRatio": 0.72
+        "budgetRatio": 0.6
       },
       "pricing": {
         "timeZone": "Asia/Shanghai",

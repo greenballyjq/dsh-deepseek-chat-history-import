@@ -817,7 +817,6 @@
         ? '有 ' + duplicateConversations + ' 个对话出现在多个来源里：' + sameConversations + ' 个内容相同'
           + (updatedConversations > 0 ? '、' + updatedConversations + ' 个采用较新版本' : '')
           + (conflictConversations > 0 ? '、' + conflictConversations + ' 个无法判断哪份更新（保留先读到的）' : '')
-          + (sources.some((source) => !source.exportDate) ? '（有来源没有日期，未按日期比较）' : '')
         : ''
 
       return h('div', { className: 'dsdi-root' },

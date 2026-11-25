@@ -778,9 +778,15 @@
 
       const formatBadge = formats.length > 0
         ? (formats.length === 1 ? formats[0].label : '混合来源')
-        : (format === 'official' ? '官方导出' : format === 'cache' ? '浏览器导出' : format ? '混合来源' : '')
-      const formatDetail = formats.length > 1
-        ? formats.map((item) => item.label + ' × ' + item.count).join('、')
+        : (format === 'official' ? '官方导出' : format === 'cache' ? '浏览器记录' : format ? '混合来源' : '')
+      const formatSummary = formats.length > 1
+        ? formats.map((item) => item.label + ' ' + item.count + ' 个').join(' · ')
+        : ''
+      const duplicateText = duplicates > 0
+        ? '同一对话重复出现 ' + duplicates + ' 次' + (updated === 0
+          ? '（内容相同）'
+          : '（' + (updated === duplicates ? '内容均不同' : '其中 ' + updated + ' 次内容不同')
+            + (conflicts > 0 ? '，' + conflicts + ' 次无法判断哪份更新' : '') + '）')
         : ''
 
       return h('div', { className: 'dsdi-root' },
@@ -881,16 +887,15 @@
         ) : null,
         h('div', { className: 'dsdi-status' },
           formatBadge ? h('span', { className: 'dsdi-badge ok' }, formatBadge) : null,
-          formatDetail ? h('span', { className: 'dsdi-result' }, formatDetail) : null,
+          formatSummary ? h('span', { className: 'dsdi-result' }, formatSummary) : null,
           sources.length > 1 ? h('span', null, sources.length + ' 个文件') : null,
-          duplicates > 0 ? h('span', { className: 'dsdi-result' }, '重复 ' + duplicates + ' 项' + (updated > 0 ? '（' + updated + ' 个有更新）' : '')) : null,
-          oldOnly > 0 ? h('span', { className: 'dsdi-result' }, '旧版独有 ' + oldOnly) : null,
-          newOnly > 0 ? h('span', { className: 'dsdi-result' }, '新版独有 ' + newOnly) : null,
-          conflicts > 0 ? h('span', { className: 'dsdi-result' }, '冲突 ' + conflicts) : null,
-          skipped.length > 0 ? h('span', { className: 'dsdi-result' }, '跳过 ' + skipped.length + ' 项') : null,
-          skipped.length > 0 ? h('button', { className: 'dsdi-link-btn', onClick: () => setSkippedOpen(!skippedOpen) }, skippedOpen ? '收起' : '详情') : null,
           conversations.length ? h('span', null, '共 ' + conversations.length + ' 个对话') : null,
           loading ? h('span', null, '读取中…') : null,
+          duplicateText ? h('span', { className: 'dsdi-result' }, duplicateText) : null,
+          oldOnly > 0 ? h('span', { className: 'dsdi-result' }, '只出现在较早导出：' + oldOnly + ' 个') : null,
+          newOnly > 0 ? h('span', { className: 'dsdi-result' }, '只出现在较新导出：' + newOnly + ' 个') : null,
+          skipped.length > 0 ? h('span', { className: 'dsdi-result' }, '跳过 ' + skipped.length + ' 项') : null,
+          skipped.length > 0 ? h('button', { className: 'dsdi-link-btn', onClick: () => setSkippedOpen(!skippedOpen) }, skippedOpen ? '收起' : '详情') : null,
           notice ? h('span', { className: 'dsdi-result' }, notice) : null,
         ),
         skippedOpen && skipped.length > 0 ? h('div', { className: 'dsdi-detailtext' },

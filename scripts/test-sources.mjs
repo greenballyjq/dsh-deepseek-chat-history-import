@@ -45,4 +45,23 @@ const broken = loadSources([bad])
 assert.equal(broken.byId.size, 0)
 assert.equal(broken.skipped.length, 1)
 
-console.log('PASS validate files, dedupe, tolerate missing and broken files')
+const v3 = path.join(dir, 'v3.json')
+fs.writeFileSync(v3, JSON.stringify({
+  id: 'v3-session',
+  title: 'v3',
+  current_message_id: 2,
+  inserted_at: '2026-01-01T00:00:00.000Z',
+  updated_at: '2026-01-01T00:00:02.000Z',
+  messages: [
+    { id: 1, parent_id: null, role: 'USER', status: 'FINISHED', fragments: [{ type: 'REQUEST', content: 'hi' }] },
+    { id: 2, parent_id: 1, role: 'ASSISTANT', status: 'FINISHED', fragments: [{ type: 'RESPONSE', content: 'ok' }] },
+  ],
+}))
+const v3Loaded = loadSources([v3])
+assert.equal(v3Loaded.byId.size, 1)
+assert.equal(v3Loaded.skipped.length, 0)
+assert.equal(v3Loaded.kind, 'official')
+assert.equal(v3Loaded.formats.get('v3-session'), 'official/v3')
+assert.deepEqual(v3Loaded.byId.get('v3-session').messages.map((message) => message.role), ['user', 'assistant'])
+
+console.log('PASS validate files, dedupe, tolerate missing and broken files, recognize v3 sessions')

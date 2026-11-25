@@ -101,16 +101,13 @@ function browser(id, title, options = {}) {
   }
 }
 
-const officialText = (conv) => Object.values(conv.mapping || {})
-  .flatMap((node) => (node.message && node.message.fragments) || [])
-  .filter((fragment) => fragment && fragment.type === 'RESPONSE')
-  .map((fragment) => fragment.content)
+/** Assistant text of one canonical conversation, joined the way fixtures write it. */
+const textOf = (conv) => (conv.messages || [])
+  .map((message) => message.content && message.content.text)
+  .filter(Boolean)
   .join('|')
-const browserText = (conv) => ((conv.data && conv.data.chat_messages) || [])
-  .flatMap((message) => message.fragments || [])
-  .filter((fragment) => fragment && fragment.type === 'RESPONSE')
-  .map((fragment) => fragment.content)
-  .join('|')
+const officialText = textOf
+const browserText = textOf
 const report = (label, result) => ({
   label,
   unique: result.byId.size,

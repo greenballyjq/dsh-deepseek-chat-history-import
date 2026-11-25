@@ -712,6 +712,7 @@ window.__ModuleLoader__.load({
       const [errorDetail, setErrorDetail] = React.useState('')
       const [errorOpen, setErrorOpen] = React.useState(false)
       const [format, setFormat] = React.useState('')
+      const [formats, setFormats] = React.useState([])
       const [conversations, setConversations] = React.useState([])
       const [query, setQuery] = React.useState('')
       const [selectedId, setSelectedId] = React.useState(null)
@@ -1002,6 +1003,7 @@ window.__ModuleLoader__.load({
             ? nextSources.length + ' 个文件'
             : String((nextSources[0] && nextSources[0].name) || '').replace(/^\d{10,}-/, ''))
           setFormat(payload.format)
+          setFormats(Array.isArray(payload.formats) ? payload.formats : [])
           setConversations(Array.isArray(payload.conversations) ? payload.conversations : [])
           setSelectedId(null)
           setScrollTop(0)
@@ -1438,11 +1440,19 @@ window.__ModuleLoader__.load({
         h('span', { className: 'dsdi-rowtext' },
           h('span', { className: 'dsdi-rowtitle' }, item.title || '（无标题）'),
           h('span', { className: 'dsdi-rowmeta' },
+            item.format ? h('span', null, item.format) : null,
             h('span', null, item.messages + ' 条消息'),
             h('span', null, formatDate(item.updatedAt)),
           ),
         ),
       )
+
+      const formatBadge = formats.length > 0
+        ? (formats.length === 1 ? formats[0].label : '混合来源')
+        : (format === 'official' ? '官方导出' : format === 'cache' ? '浏览器导出' : format ? '混合来源' : '')
+      const formatDetail = formats.length > 1
+        ? formats.map((item) => item.label + ' × ' + item.count).join('、')
+        : ''
 
       return h('div', { className: 'dsdi-root' },
         h('style', null, CSS),
@@ -1541,7 +1551,8 @@ window.__ModuleLoader__.load({
           ) : null,
         ) : null,
         h('div', { className: 'dsdi-status' },
-          format ? h('span', { className: 'dsdi-badge ok' }, format === 'official' ? '官方导出' : format === 'cache' ? '浏览器导出' : '混合来源') : null,
+          formatBadge ? h('span', { className: 'dsdi-badge ok' }, formatBadge) : null,
+          formatDetail ? h('span', { className: 'dsdi-result' }, formatDetail) : null,
           sources.length > 1 ? h('span', null, sources.length + ' 个文件') : null,
           duplicates > 0 ? h('span', { className: 'dsdi-result' }, '重复 ' + duplicates + ' 项' + (updated > 0 ? '（' + updated + ' 个有更新）' : '')) : null,
           oldOnly > 0 ? h('span', { className: 'dsdi-result' }, '旧版独有 ' + oldOnly) : null,

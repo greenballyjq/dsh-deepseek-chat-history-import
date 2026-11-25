@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { buildNodeMap, childMapOf, selectPath, buildTranscript, buildTranscriptTail, extractConversation } from '../lib/conversation.js'
+import { normalizeValue } from '../lib/formats/index.js'
 
 function officialConversation(extra = {}) {
   return {
@@ -66,6 +67,14 @@ function cacheConversation(extra = {}) {
 }
 
 const ids = (nodes) => nodes.map((node) => node.id)
+
+/** Normalize one raw fixture the same way an imported file is normalized. */
+function asConversation(value) {
+  const normalized = normalizeValue(value, {})
+  assert.ok(normalized, 'fixture must be recognized')
+  return normalized.conv
+}
+
 let failures = 0
 function check(name, fn) {
   try {
@@ -77,8 +86,8 @@ function check(name, fn) {
   }
 }
 
-const official = officialConversation()
-const officialMap = buildNodeMap('official', official)
+const official = asConversation(officialConversation())
+const officialMap = buildNodeMap(official)
 const officialChildren = childMapOf(officialMap.nodes)
 
 check('recent picks the latest leaf, not the longest branch', () => {
@@ -90,40 +99,40 @@ check('longest still picks the deepest branch', () => {
 })
 
 check('transcript opens on the latest branch', () => {
-  const result = buildTranscript('official', official, { limit: 600 })
+  const result = buildTranscript(official, { limit: 600 })
   assert.deepEqual(result.messages.map((message) => message.id), ['n1', 'n3', 'n6'])
   assert.equal(result.leafId, 'n6')
 })
 
 check('transcript reopens on a stored custom leaf', () => {
-  const result = buildTranscript('official', official, { limit: 600, leafId: 'n5' })
+  const result = buildTranscript(official, { limit: 600, leafId: 'n5' })
   assert.deepEqual(result.messages.map((message) => message.id), ['n1', 'n2', 'n4', 'n5'])
   assert.equal(result.leafId, 'n5')
 })
 
 check('switching a version still follows the longest continuation', () => {
-  const result = buildTranscriptTail('official', official, 'n3', { limit: 600 })
+  const result = buildTranscriptTail(official, 'n3', { limit: 600 })
   assert.deepEqual(result.messages.map((message) => message.id), ['n3', 'n6'])
 })
 
 check('recent prefers the marked current version over the latest', () => {
-  const marked = officialConversation({ current_message_id: 'n5' })
-  const map = buildNodeMap('official', marked)
+  const marked = asConversation(officialConversation({ current_message_id: 'n5' }))
+  const map = buildNodeMap(marked)
   const children = childMapOf(map.nodes)
   assert.deepEqual(ids(selectPath(map, children, 'recent', '')), ['n1', 'n2', 'n4', 'n5'])
-  const result = buildTranscript('official', marked, { limit: 600 })
+  const result = buildTranscript(marked, { limit: 600 })
   assert.equal(result.leafId, 'n5')
 })
 
 check('browser record uses its current message id', () => {
-  const cache = cacheConversation({ current_message_id: 'n5' })
-  const map = buildNodeMap('cache', cache)
+  const cache = asConversation(cacheConversation({ current_message_id: 'n5' }))
+  const map = buildNodeMap(cache)
   const children = childMapOf(map.nodes)
   assert.deepEqual(ids(selectPath(map, children, 'recent', '')), ['n1', 'n2', 'n4', 'n5'])
 })
 
 check('import path uses the latest branch by default', () => {
-  const turns = extractConversation('official', official, { rule: 'recent', leafId: '' })
+  const turns = extractConversation(official, { rule: 'recent', leafId: '' })
   assert.equal(turns[turns.length - 1].user, 'Q3')
 })
 
@@ -142,7 +151,7 @@ check('latest tie prefers the longer chain', () => {
       b4: { id: 'b4', parent: 'b3', children: [], message: { inserted_at: '2026-01-01T00:00:02Z', fragments: [{ type: 'RESPONSE', content: 'B4' }] } },
     },
   }
-  const map = buildNodeMap('official', conversation)
+  const map = buildNodeMap(asConversation(conversation))
   const children = childMapOf(map.nodes)
   assert.deepEqual(ids(selectPath(map, children, 'recent', '')), ['b1', 'b2', 'b3', 'b4'])
 })

@@ -66,6 +66,7 @@
       const [listHeight, setListHeight] = React.useState(380)
       const listRef = React.useRef(null)
       const [mode, setMode] = React.useState('placeholder')
+      const [keepThinking, setKeepThinking] = React.useState(false)
       const [retainTurns, setRetainTurns] = React.useState(100)
       const [summaryChars, setSummaryChars] = React.useState(DEFAULT_SUMMARY_CHARS)
       const [reasoningEffort, setReasoningEffort] = React.useState('off')
@@ -177,6 +178,7 @@
         : [{ id: 'standard', name: '标准', chars: DEFAULT_SUMMARY_CHARS }]
       const limits = (profileInfo && profileInfo.limits) || DEFAULT_LIMITS
       const reasoningOptions = (profileInfo && Array.isArray(profileInfo.reasoningEfforts)) ? profileInfo.reasoningEfforts : []
+      const memoryModes = (profileInfo && Array.isArray(profileInfo.memoryModes)) ? profileInfo.memoryModes : []
       const defaultReasoningEffort = () => {
         const settings = (profileInfo && profileInfo.settings) || {}
         const defaults = settings.defaults || {}
@@ -192,6 +194,7 @@
         : (mode === 'summary' && summaryPromptText.length > summaryPromptLimit ? '摘要提示词不能超过 ' + summaryPromptLimit + ' 字' : '')
       const compressPayload = () => ({
         mode,
+        keepThinking,
         retainTurns,
         summaryChars: Number(summaryChars),
         maxCostCny: maxCost,
@@ -203,6 +206,7 @@
 
       React.useEffect(() => {
         setReasoningEffort(defaultReasoningEffort())
+        setKeepThinking(false)
       }, [selectedId])
 
       const chooseSummaryPreset = (value) => {
@@ -733,6 +737,8 @@
             + (result.summaryTotalChars ? '，约 ' + result.summaryTotalChars + ' 字' : '') + '）已写入会话' + dropped)
         } else if (result.mode === 'summary' && result.summarySegments > 0) {
           parts.push('摘要 ' + result.summarySegments + ' 段（约 ' + result.summaryTotalChars + ' 字）已写入会话')
+        } else if (result.mode === 'full' && result.compressed) {
+          parts.push('较早的 ' + Math.max(0, result.totalTurns - result.retainedTurns) + ' 轮已完整存档')
         } else if (result.compressed) {
           parts.push('较早的 ' + Math.max(0, result.totalTurns - result.retainedTurns) + ' 轮已丢弃')
         } else {
@@ -781,7 +787,8 @@
           const context = estimateItem.context
           const effective = context && context.effectiveRetainTurns ? context.effectiveRetainTurns : retainTurns
           const older = Math.max(0, estimateItem.turns - effective)
-          parts.push('保留最近 ' + effective + ' 轮，前 ' + older + ' 轮' + (mode === 'summary' ? '概括为摘要' : '不保留'))
+          parts.push('保留最近 ' + effective + ' 轮，前 ' + older + ' 轮'
+            + (mode === 'summary' ? '概括为摘要' : mode === 'full' ? '完整存档' : '不保留'))
           if (context && context.adjusted && !estimateItem.forced) parts.push('按当前设置会超出模型上下文，保留轮数已自动减少到 ' + effective + ' 轮')
           if (mode === 'summary' && estimateItem.estimate) {
             const cost = estimateItem.estimate.costCny
@@ -1033,15 +1040,15 @@
             ),
             h('div', { className: 'dsdi-field' },
               h('span', null, '超出部分'),
-              h('label', { className: 'dsdi-option' },
-                h('input', { type: 'radio', name: 'dsdi-mode', checked: mode === 'placeholder', onChange: () => setMode('placeholder') }),
-                h('span', null, '不保留'),
-              ),
-              h('label', { className: 'dsdi-option' },
-                h('input', { type: 'radio', name: 'dsdi-mode', checked: mode === 'summary', onChange: () => setMode('summary') }),
-                h('span', null, '概括为摘要'),
-              ),
+              memoryModes.map((item) => h('label', { className: 'dsdi-option', key: item.id },
+                h('input', { type: 'radio', name: 'dsdi-mode', checked: mode === item.id, onChange: () => setMode(item.id) }),
+                h('span', null, item.label),
+              )),
             ),
+            mode === 'full' ? h('label', { className: 'dsdi-option' },
+              h('input', { type: 'checkbox', checked: keepThinking, onChange: (event) => setKeepThinking(event.target.checked) }),
+              h('span', null, '保留 AI 思考'),
+            ) : null,
             mode === 'summary' ? h('div', { className: 'dsdi-field' },
               h('span', null, '摘要'),
               h('select', {

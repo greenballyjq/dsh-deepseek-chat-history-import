@@ -55,7 +55,7 @@
     "manifestVersion": 1
   },
   "scripts": {
-    "test": "node scripts/test-merge.mjs && node scripts/test-path.mjs && node scripts/test-sources.mjs && node scripts/test-attachments.mjs && node scripts/test-load.mjs && node scripts/test-import.mjs && node scripts/test-summary.mjs && node scripts/test-summary-call.mjs",
+    "test": "node scripts/test-merge.mjs && node scripts/test-path.mjs && node scripts/test-sources.mjs && node scripts/test-attachments.mjs && node scripts/test-load.mjs && node scripts/test-import.mjs && node scripts/test-summary.mjs && node scripts/test-summary-call.mjs && node scripts/test-memory.mjs",
     "audit": "node scripts/audit-network.mjs",
     "build:client": "node scripts/build-client.mjs"
   }

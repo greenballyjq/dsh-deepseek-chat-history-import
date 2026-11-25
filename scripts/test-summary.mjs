@@ -3,6 +3,8 @@ import {
   MAX_SUMMARY_PROMPT_CHARS,
   SUMMARY_PROMPT_PRESETS,
   buildSystemPrompt,
+  buildUserPrompt,
+  normalizeSummaryText,
   normalizePrompt,
   summaryPromptFingerprint,
   truncateSummaryText,
@@ -50,24 +52,36 @@ test('overlong prompt text is rejected', () => {
   )
 })
 
-test('the host framing carries the user text and the limit', () => {
-  const system = buildSystemPrompt('只保留要点', 1500)
-  assert.ok(system.includes('只保留要点'))
+test('the fixed system prompt carries the limit but not the style', () => {
+  const system = buildSystemPrompt(1500)
+  assert.ok(system.includes('你是对话摘要器'))
   assert.ok(system.includes('不超过 1500 字'))
-  assert.ok(system.includes('纯文本'))
-  assert.ok(system.includes('输出要求'))
+  assert.ok(system.includes('一段纯文本正文'))
+  assert.ok(!system.includes('只保留要点'))
+  const user = buildUserPrompt('只保留要点', '用户：请总结。')
+  assert.ok(user.includes('风格要求：只保留要点'))
+  assert.ok(user.includes('<transcript>\n用户：请总结。\n</transcript>'))
 })
 
-test('a literal {{limit}} is not treated as a variable', () => {
-  const system = buildSystemPrompt('写 {{limit}} 字以内', 800)
-  assert.ok(system.includes('写 {{limit}} 字以内'))
+test('a literal {{limit}} stays in the style text, not in the system prompt', () => {
+  const system = buildSystemPrompt(800)
+  const user = buildUserPrompt('写 {{limit}} 字以内', '用户：请总结。')
+  assert.ok(!system.includes('{{limit}}'))
   assert.ok(system.includes('不超过 800 字'))
+  assert.ok(user.includes('写 {{limit}} 字以内'))
+})
+
+test('summaries are normalized to one paragraph', () => {
+  assert.equal(normalizeSummaryText('第一段\n\n第二段\n- 项目'), '第一段 第二段 - 项目')
+  assert.equal(normalizeSummaryText('  a\t\tb  '), 'a b')
 })
 
 test('presets carry no host framing text', () => {
   for (const preset of SUMMARY_PROMPT_PRESETS) {
     assert.ok(!preset.text.includes('{{limit}}'))
     assert.ok(!preset.text.includes('输出要求'))
+    assert.ok(!preset.text.includes('不超过'))
+    assert.ok(!preset.text.includes('一段纯文本'))
   }
 })
 
